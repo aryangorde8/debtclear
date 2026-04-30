@@ -391,10 +391,10 @@
   </section>
 
   <!-- NEGOTIATE MODAL -->
-  <div id="negotiate-modal" hidden class="fixed inset-0 z-[100] overflow-y-auto">
+  <div id="negotiate-modal" hidden class="fixed inset-0 z-[100] flex items-start justify-center p-4 md:p-8 overflow-y-auto" data-lenis-prevent>
     <div id="modal-backdrop" class="fixed inset-0 bg-black/70 backdrop-blur-sm"></div>
-    <div class="relative min-h-screen flex items-start justify-center p-4 md:p-8">
-      <div id="modal-card" class="relative w-full max-w-3xl glass rounded-2xl p-6 md:p-8 my-8" style="opacity:0; transform: translateY(24px) scale(0.98);">
+    <div class="relative w-full max-w-3xl my-8">
+      <div id="modal-card" class="relative w-full glass rounded-2xl p-6 md:p-8" style="opacity:0; transform: translateY(24px) scale(0.98);">
         <button id="modal-close" class="absolute top-4 right-4 w-9 h-9 rounded-lg grid place-items-center text-slate-400 hover:text-white hover:bg-white/5 transition" aria-label="Close">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
         </button>
@@ -930,7 +930,7 @@
     function openNegotiate(debt) {
       lastNegotiateDebt = debt;
       modal.hidden = false;
-      lenis.stop();
+      modal.scrollTop = 0;
       document.body.style.overflow = 'hidden';
 
       modalLoading.hidden = false;
@@ -949,7 +949,6 @@
         opacity: 0, y: 24, scale: 0.98, duration: 0.22, ease: 'power2.in',
         onComplete: () => {
           modal.hidden = true;
-          lenis.start();
           document.body.style.overflow = '';
         },
       });

@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 
 from rest_framework import status
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.response import Response
 
 from . import ai_advisor, debt_engine, negotiation_engine, script_generator
@@ -75,6 +75,8 @@ def _validate(payload: dict) -> tuple[dict | None, dict | None]:
 
 
 @api_view(["POST"])
+@authentication_classes([])
+@permission_classes([])
 def analyze(request):
     clean, error = _validate(request.data)
     if error:
@@ -147,6 +149,8 @@ def _validate_negotiate(payload: dict) -> tuple[dict | None, dict | None]:
 
 
 @api_view(["POST"])
+@authentication_classes([])
+@permission_classes([])
 def negotiate(request):
     clean, error = _validate_negotiate(request.data)
     if error:
@@ -187,5 +191,7 @@ def negotiate(request):
 
 
 @api_view(["GET"])
+@authentication_classes([])
+@permission_classes([])
 def health(_request):
     return Response({"status": "ok"})
