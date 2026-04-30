@@ -1,0 +1,1111 @@
+<!DOCTYPE html>
+<html lang="en" class="bg-slate-950">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DebtClear — Pay Off Debt Smarter. Save Thousands.</title>
+  <meta name="description" content="A mathematically rigorous debt payoff analyzer. Compare Avalanche vs Snowball strategies and see exactly how much interest you'll save." />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%92%B0%3C/text%3E%3C/svg%3E" />
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@studio-freight/lenis@1.0.42/dist/lenis.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'ui-sans-serif', 'system-ui'],
+            mono: ['JetBrains Mono', 'ui-monospace'],
+          },
+          colors: {
+            ink: { 950: '#05060a', 900: '#0a0c14', 800: '#10131c', 700: '#191d2a' },
+          },
+          boxShadow: {
+            glow: '0 0 40px -10px rgba(99, 102, 241, 0.5)',
+          },
+        },
+      },
+    };
+  </script>
+
+  <style>
+    html, body { background: #05060a; color: #e2e8f0; font-family: 'Inter', ui-sans-serif, system-ui; }
+    body { font-feature-settings: 'cv11', 'ss01', 'ss03'; }
+    .gradient-text {
+      background: linear-gradient(135deg, #818cf8 0%, #c084fc 35%, #f472b6 70%, #fb923c 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .grid-bg {
+      background-image:
+        radial-gradient(circle at 50% 0%, rgba(99, 102, 241, 0.18), transparent 55%),
+        linear-gradient(rgba(148, 163, 184, 0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(148, 163, 184, 0.04) 1px, transparent 1px);
+      background-size: 100% 100%, 56px 56px, 56px 56px;
+      background-position: 0 0, 0 0, 0 0;
+    }
+    .glass {
+      background: linear-gradient(180deg, rgba(20, 23, 35, 0.65) 0%, rgba(10, 12, 20, 0.9) 100%);
+      border: 1px solid rgba(148, 163, 184, 0.10);
+      backdrop-filter: blur(12px);
+    }
+    .glass:hover { border-color: rgba(148, 163, 184, 0.18); }
+    .input-base {
+      background: rgba(8, 10, 16, 0.85);
+      border: 1px solid rgba(148, 163, 184, 0.14);
+      color: #f1f5f9;
+      transition: all 0.18s ease;
+    }
+    .input-base:focus {
+      outline: none;
+      border-color: #818cf8;
+      box-shadow: 0 0 0 4px rgba(129, 140, 248, 0.15);
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+      transition: transform 0.15s ease, box-shadow 0.2s ease;
+    }
+    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 12px 36px -8px rgba(99, 102, 241, 0.55); }
+    .btn-primary:active { transform: translateY(0); }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+    .winner-glow { box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.55), 0 12px 60px -16px rgba(34, 197, 94, 0.4); }
+    .stress-ring { transform: rotate(-90deg); }
+    .spinner {
+      width: 18px; height: 18px;
+      border: 2.5px solid rgba(255, 255, 255, 0.25);
+      border-top-color: #fff; border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .fade-init { opacity: 0; transform: translateY(24px); }
+    [hidden] { display: none !important; }
+    ::selection { background: rgba(129, 140, 248, 0.45); color: white; }
+  </style>
+</head>
+
+<body class="min-h-screen overflow-x-hidden">
+  <!-- NAV -->
+  <header class="fixed top-0 inset-x-0 z-50 backdrop-blur-md bg-ink-950/70 border-b border-white/5">
+    <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+      <a href="#" class="flex items-center gap-2.5 group">
+        <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-fuchsia-500 grid place-items-center text-white font-bold text-sm">D</div>
+        <span class="font-semibold tracking-tight text-slate-100">DebtClear</span>
+      </a>
+      <nav class="hidden md:flex items-center gap-7 text-sm text-slate-400">
+        <a href="#how" class="hover:text-slate-100 transition">How it works</a>
+        <a href="#analyze" class="hover:text-slate-100 transition">Analyze</a>
+        <a href="https://github.com/" target="_blank" rel="noopener" class="hover:text-slate-100 transition">GitHub</a>
+      </nav>
+      <a href="#analyze" class="text-sm font-medium px-4 py-2 rounded-lg btn-primary text-white">Get Started</a>
+    </div>
+  </header>
+
+  <!-- HERO -->
+  <section class="relative pt-40 pb-28 grid-bg">
+    <div class="max-w-5xl mx-auto px-6 text-center">
+      <div data-anim="hero-tag" class="fade-init inline-flex items-center gap-2 text-xs font-medium tracking-wide text-indigo-300 bg-indigo-500/10 border border-indigo-400/20 rounded-full px-3 py-1.5 mb-7">
+        <span class="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse"></span>
+        Powered by Claude Sonnet 4.6 on AWS Bedrock
+      </div>
+      <h1 data-anim="hero-h1" class="fade-init text-5xl md:text-7xl font-extrabold tracking-tight leading-[1.05] mb-6">
+        Pay Off Debt Smarter.<br />
+        <span class="gradient-text">Save Thousands.</span>
+      </h1>
+      <p data-anim="hero-sub" class="fade-init text-lg md:text-xl text-slate-400 max-w-2xl mx-auto mb-10 leading-relaxed">
+        Most people pay off debt in the wrong order and lose thousands to interest. DebtClear simulates Avalanche vs Snowball on your real numbers and tells you exactly which one wins.
+      </p>
+      <div data-anim="hero-cta" class="fade-init flex items-center justify-center gap-4">
+        <a href="#analyze" class="btn-primary text-white font-semibold px-7 py-3.5 rounded-xl shadow-glow">Analyze My Debt</a>
+        <a href="#how" class="text-slate-300 hover:text-white font-medium px-5 py-3.5 transition">See how it works →</a>
+      </div>
+      <div data-anim="hero-stats" class="fade-init mt-20 grid grid-cols-3 gap-6 max-w-3xl mx-auto">
+        <div class="text-center">
+          <div class="text-3xl md:text-4xl font-bold text-white">77%</div>
+          <div class="text-xs text-slate-500 mt-1.5 tracking-wide uppercase">of adults carry multiple debts</div>
+        </div>
+        <div class="text-center">
+          <div class="text-3xl md:text-4xl font-bold gradient-text">$1,200</div>
+          <div class="text-xs text-slate-500 mt-1.5 tracking-wide uppercase">avg interest saved with right order</div>
+        </div>
+        <div class="text-center">
+          <div class="text-3xl md:text-4xl font-bold text-white">~12</div>
+          <div class="text-xs text-slate-500 mt-1.5 tracking-wide uppercase">months sooner to debt-free</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section id="how" class="py-20 border-t border-white/5">
+    <div class="max-w-6xl mx-auto px-6">
+      <div class="text-center mb-14">
+        <h2 class="text-3xl md:text-4xl font-bold tracking-tight mb-3">Two strategies. One winner. Real math.</h2>
+        <p class="text-slate-400 max-w-2xl mx-auto">DebtClear runs a month-by-month simulation of how interest compounds and how each strategy attacks your specific portfolio.</p>
+      </div>
+      <div class="grid md:grid-cols-3 gap-5">
+        <div class="glass rounded-2xl p-6">
+          <div class="w-10 h-10 rounded-lg bg-indigo-500/15 text-indigo-300 grid place-items-center mb-4 font-mono font-bold">01</div>
+          <h3 class="text-lg font-semibold text-white mb-1.5">Enter your debts</h3>
+          <p class="text-sm text-slate-400 leading-relaxed">Balance, APR, and minimum payment for each debt. Add as many as you have.</p>
+        </div>
+        <div class="glass rounded-2xl p-6">
+          <div class="w-10 h-10 rounded-lg bg-fuchsia-500/15 text-fuchsia-300 grid place-items-center mb-4 font-mono font-bold">02</div>
+          <h3 class="text-lg font-semibold text-white mb-1.5">We simulate both strategies</h3>
+          <p class="text-sm text-slate-400 leading-relaxed">Avalanche (highest rate first) vs Snowball (lowest balance first), with real compounding interest.</p>
+        </div>
+        <div class="glass rounded-2xl p-6">
+          <div class="w-10 h-10 rounded-lg bg-orange-500/15 text-orange-300 grid place-items-center mb-4 font-mono font-bold">03</div>
+          <h3 class="text-lg font-semibold text-white mb-1.5">Claude advises you</h3>
+          <p class="text-sm text-slate-400 leading-relaxed">Anthropic's Claude Sonnet 4.6 reads the math and tells you exactly what to do this month.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ANALYZE FORM -->
+  <section id="analyze" class="py-20 border-t border-white/5">
+    <div class="max-w-3xl mx-auto px-6">
+      <div class="text-center mb-10">
+        <h2 class="text-3xl md:text-4xl font-bold tracking-tight mb-3">Enter your numbers</h2>
+        <p class="text-slate-400">Nothing leaves your browser except this analysis request. We don't store your data.</p>
+      </div>
+
+      <form id="debt-form" class="glass rounded-2xl p-6 md:p-8 space-y-7">
+        <div class="grid md:grid-cols-2 gap-5">
+          <label class="block">
+            <span class="block text-sm font-medium text-slate-300 mb-2">Monthly income (after tax)</span>
+            <div class="relative">
+              <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-mono">$</span>
+              <input type="number" name="monthly_income" min="1" step="50" required value="5000"
+                     class="input-base w-full pl-9 pr-4 py-3 rounded-xl text-base font-medium" />
+            </div>
+          </label>
+          <label class="block">
+            <span class="block text-sm font-medium text-slate-300 mb-2">Extra monthly payment available</span>
+            <div class="relative">
+              <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-mono">$</span>
+              <input type="number" name="extra_payment" min="0" step="25" required value="200"
+                     class="input-base w-full pl-9 pr-4 py-3 rounded-xl text-base font-medium" />
+            </div>
+          </label>
+        </div>
+
+        <div>
+          <div class="flex items-end justify-between mb-3">
+            <div>
+              <h3 class="text-base font-semibold text-white">Your debts</h3>
+              <p class="text-xs text-slate-500 mt-0.5">Add every loan, card, or balance you're paying down.</p>
+            </div>
+            <button type="button" id="add-debt" class="text-sm font-medium text-indigo-300 hover:text-indigo-200 flex items-center gap-1.5">
+              <span class="w-5 h-5 rounded-md bg-indigo-500/15 grid place-items-center text-base leading-none">+</span>
+              Add debt
+            </button>
+          </div>
+          <div id="debt-list" class="space-y-3"></div>
+        </div>
+
+        <div id="form-error" class="hidden text-sm text-rose-300 bg-rose-500/10 border border-rose-500/20 rounded-lg px-4 py-3"></div>
+
+        <div class="pt-2">
+          <button type="submit" id="submit-btn" class="btn-primary w-full md:w-auto md:px-12 py-3.5 rounded-xl text-white font-semibold shadow-glow flex items-center justify-center gap-2.5">
+            <span class="spinner hidden" id="submit-spinner"></span>
+            <span id="submit-label">Analyze My Debt</span>
+          </button>
+          <p id="submit-status" class="hidden text-sm text-slate-400 mt-3"></p>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <!-- RESULTS -->
+  <section id="results" hidden class="py-20 border-t border-white/5">
+    <div class="max-w-6xl mx-auto px-6">
+
+      <!-- Headline result -->
+      <div data-result class="fade-init text-center mb-14">
+        <div class="text-xs uppercase tracking-widest text-indigo-300 font-semibold mb-3">Your analysis is ready</div>
+        <h2 class="text-3xl md:text-5xl font-bold tracking-tight mb-3">
+          You could save <span id="r-saved" class="gradient-text">$0</span>
+        </h2>
+        <p class="text-slate-400 text-lg" id="r-saved-sub">Choosing the right payoff strategy.</p>
+      </div>
+
+      <!-- Top stats grid -->
+      <div class="grid md:grid-cols-3 gap-5 mb-10">
+        <!-- Stress score -->
+        <div data-result class="fade-init glass rounded-2xl p-6 flex items-center gap-5">
+          <div class="relative w-24 h-24 shrink-0">
+            <svg viewBox="0 0 100 100" class="stress-ring w-full h-full">
+              <circle cx="50" cy="50" r="42" stroke="rgba(148,163,184,0.12)" stroke-width="8" fill="none" />
+              <circle id="stress-circle" cx="50" cy="50" r="42" stroke="#f97316" stroke-width="8" fill="none"
+                      stroke-linecap="round" stroke-dasharray="263.89" stroke-dashoffset="263.89" />
+            </svg>
+            <div id="stress-value" class="absolute inset-0 grid place-items-center text-2xl font-bold text-white">0</div>
+          </div>
+          <div>
+            <div class="text-xs uppercase tracking-wider text-slate-500 font-semibold mb-1">Financial Stress Score</div>
+            <div id="stress-label" class="text-base font-semibold text-white">—</div>
+            <div class="text-xs text-slate-400 mt-1">Lower is healthier (0–100).</div>
+          </div>
+        </div>
+
+        <!-- Total debt -->
+        <div data-result class="fade-init glass rounded-2xl p-6">
+          <div class="text-xs uppercase tracking-wider text-slate-500 font-semibold mb-2">Total debt</div>
+          <div id="r-total-debt" class="text-3xl font-bold text-white">$0</div>
+          <div id="r-debt-meta" class="text-xs text-slate-400 mt-1.5">across 0 balances</div>
+        </div>
+
+        <!-- Weighted rate -->
+        <div data-result class="fade-init glass rounded-2xl p-6">
+          <div class="text-xs uppercase tracking-wider text-slate-500 font-semibold mb-2">Weighted avg rate</div>
+          <div id="r-weighted-rate" class="text-3xl font-bold text-white">0%</div>
+          <div class="text-xs text-slate-400 mt-1.5">balance-weighted across all debts</div>
+        </div>
+      </div>
+
+      <!-- Strategy comparison -->
+      <div class="grid md:grid-cols-2 gap-5 mb-10">
+        <div data-result class="fade-init glass rounded-2xl p-6 md:p-7" id="card-avalanche">
+          <div class="flex items-center justify-between mb-5">
+            <div class="flex items-center gap-2.5">
+              <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-500 grid place-items-center text-white font-bold">⛰️</div>
+              <div>
+                <div class="text-base font-semibold text-white">Avalanche</div>
+                <div class="text-xs text-slate-500">Highest interest rate first</div>
+              </div>
+            </div>
+            <span id="badge-avalanche" class="hidden text-xs font-semibold uppercase tracking-wider text-emerald-300 bg-emerald-500/15 border border-emerald-400/30 rounded-full px-2.5 py-1">Recommended</span>
+          </div>
+          <div class="space-y-4">
+            <div>
+              <div class="text-xs uppercase tracking-wider text-slate-500 font-semibold mb-1">Months to debt-free</div>
+              <div class="text-3xl font-bold text-white" id="ava-months">—</div>
+            </div>
+            <div>
+              <div class="text-xs uppercase tracking-wider text-slate-500 font-semibold mb-1">Total interest paid</div>
+              <div class="text-3xl font-bold text-white" id="ava-interest">—</div>
+            </div>
+            <div class="pt-3 border-t border-white/5">
+              <div class="text-xs text-slate-500 mb-1.5">Payoff order</div>
+              <div id="ava-order" class="text-xs text-slate-300 font-mono leading-relaxed">—</div>
+            </div>
+          </div>
+        </div>
+
+        <div data-result class="fade-init glass rounded-2xl p-6 md:p-7" id="card-snowball">
+          <div class="flex items-center justify-between mb-5">
+            <div class="flex items-center gap-2.5">
+              <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-sky-500 to-indigo-500 grid place-items-center text-white font-bold">❄️</div>
+              <div>
+                <div class="text-base font-semibold text-white">Snowball</div>
+                <div class="text-xs text-slate-500">Lowest balance first</div>
+              </div>
+            </div>
+            <span id="badge-snowball" class="hidden text-xs font-semibold uppercase tracking-wider text-emerald-300 bg-emerald-500/15 border border-emerald-400/30 rounded-full px-2.5 py-1">Recommended</span>
+          </div>
+          <div class="space-y-4">
+            <div>
+              <div class="text-xs uppercase tracking-wider text-slate-500 font-semibold mb-1">Months to debt-free</div>
+              <div class="text-3xl font-bold text-white" id="sno-months">—</div>
+            </div>
+            <div>
+              <div class="text-xs uppercase tracking-wider text-slate-500 font-semibold mb-1">Total interest paid</div>
+              <div class="text-3xl font-bold text-white" id="sno-interest">—</div>
+            </div>
+            <div class="pt-3 border-t border-white/5">
+              <div class="text-xs text-slate-500 mb-1.5">Payoff order</div>
+              <div id="sno-order" class="text-xs text-slate-300 font-mono leading-relaxed">—</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Charts -->
+      <div class="grid md:grid-cols-5 gap-5 mb-10">
+        <div data-result class="fade-init glass rounded-2xl p-6 md:col-span-2">
+          <div class="text-base font-semibold text-white mb-1">Debt breakdown</div>
+          <div class="text-xs text-slate-500 mb-5">Where your balance sits today.</div>
+          <div class="relative h-72"><canvas id="chart-donut"></canvas></div>
+        </div>
+        <div data-result class="fade-init glass rounded-2xl p-6 md:col-span-3">
+          <div class="flex items-end justify-between mb-1">
+            <div>
+              <div class="text-base font-semibold text-white">Payoff trajectory</div>
+              <div class="text-xs text-slate-500">Total balance, month-by-month.</div>
+            </div>
+            <div class="flex items-center gap-3 text-xs">
+              <span class="flex items-center gap-1.5 text-slate-300"><span class="w-3 h-0.5 bg-emerald-400 rounded-full"></span>Avalanche</span>
+              <span class="flex items-center gap-1.5 text-slate-300"><span class="w-3 h-0.5 bg-indigo-400 rounded-full"></span>Snowball</span>
+            </div>
+          </div>
+          <div class="relative h-72 mt-4"><canvas id="chart-line"></canvas></div>
+        </div>
+      </div>
+
+      <!-- Negotiate Mode -->
+      <div data-result class="fade-init mb-10">
+        <div class="flex items-end justify-between mb-5 flex-wrap gap-3">
+          <div>
+            <div class="flex items-center gap-2 mb-1">
+              <span class="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-orange-300 bg-orange-500/10 border border-orange-400/25 rounded-full px-2.5 py-1">
+                <span class="w-1.5 h-1.5 rounded-full bg-orange-400"></span>
+                Negotiate Mode
+              </span>
+            </div>
+            <h3 class="text-2xl font-bold text-white tracking-tight">Settle your debts for less</h3>
+            <p class="text-sm text-slate-400 mt-1 max-w-2xl">Creditors regularly accept 40–60% of credit card balances. Pick a debt — Claude will analyse your leverage and write a phone-call script using your real numbers.</p>
+          </div>
+        </div>
+        <div id="debt-cards" class="grid md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+      </div>
+
+      <!-- AI Analysis -->
+      <div data-result class="fade-init glass rounded-2xl p-7 md:p-9">
+        <div class="flex items-center justify-between flex-wrap gap-3 mb-6">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-400 via-fuchsia-500 to-indigo-500 grid place-items-center text-white font-bold">✦</div>
+            <div>
+              <div class="text-base font-semibold text-white">Personalized advice from Claude</div>
+              <div id="ai-source-label" class="text-xs text-slate-500">Anthropic Claude Sonnet 4.6 · AWS Bedrock</div>
+            </div>
+          </div>
+        </div>
+        <div id="ai-analysis" class="prose-invert text-slate-200 leading-relaxed space-y-4 text-[15px]"></div>
+      </div>
+
+      <div class="text-center mt-12">
+        <button id="reset-btn" class="text-sm font-medium text-slate-400 hover:text-white transition">← Run another analysis</button>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- NEGOTIATE MODAL -->
+  <div id="negotiate-modal" hidden class="fixed inset-0 z-[100] overflow-y-auto">
+    <div id="modal-backdrop" class="fixed inset-0 bg-black/70 backdrop-blur-sm"></div>
+    <div class="relative min-h-screen flex items-start justify-center p-4 md:p-8">
+      <div id="modal-card" class="relative w-full max-w-3xl glass rounded-2xl p-6 md:p-8 my-8" style="opacity:0; transform: translateY(24px) scale(0.98);">
+        <button id="modal-close" class="absolute top-4 right-4 w-9 h-9 rounded-lg grid place-items-center text-slate-400 hover:text-white hover:bg-white/5 transition" aria-label="Close">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+
+        <div class="flex items-center gap-3 mb-1 pr-12">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-400 via-rose-500 to-fuchsia-500 grid place-items-center text-white">💬</div>
+          <div>
+            <div class="text-xs uppercase tracking-widest text-orange-300 font-bold">Negotiation strategy</div>
+            <div id="modal-debt-name" class="text-xl font-bold text-white">—</div>
+          </div>
+        </div>
+        <div id="modal-debt-meta" class="text-xs text-slate-400 mb-6 ml-[52px]">—</div>
+
+        <!-- Loading state -->
+        <div id="modal-loading" class="py-16 text-center">
+          <div class="inline-flex items-center gap-3 text-slate-300">
+            <span class="spinner"></span>
+            <span class="text-sm font-medium">Analyzing leverage and generating script…</span>
+          </div>
+          <div class="text-xs text-slate-500 mt-3">Claude Sonnet 4.6 is writing your call script.</div>
+        </div>
+
+        <!-- Error state -->
+        <div id="modal-error" hidden class="py-10 text-center">
+          <div class="text-rose-300 text-sm font-medium" id="modal-error-msg">Something went wrong.</div>
+          <button id="modal-retry" class="mt-4 text-sm font-medium text-indigo-300 hover:text-indigo-200">Try again</button>
+        </div>
+
+        <!-- Content -->
+        <div id="modal-content" hidden class="space-y-7">
+          <!-- Leverage block -->
+          <div>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div class="glass rounded-xl p-4">
+                <div class="text-[10px] uppercase tracking-wider text-slate-500 font-semibold mb-1">Debt type</div>
+                <div id="lv-type" class="text-base font-semibold text-white">—</div>
+              </div>
+              <div class="glass rounded-xl p-4">
+                <div class="text-[10px] uppercase tracking-wider text-slate-500 font-semibold mb-1">Leverage</div>
+                <div class="flex items-baseline gap-1.5">
+                  <span id="lv-score" class="text-2xl font-bold text-white">0</span>
+                  <span class="text-xs text-slate-500 font-mono">/100</span>
+                </div>
+                <div class="mt-1.5 h-1.5 bg-white/5 rounded-full overflow-hidden">
+                  <div id="lv-bar" class="h-full bg-gradient-to-r from-orange-400 to-fuchsia-500 transition-all duration-700" style="width:0%"></div>
+                </div>
+              </div>
+              <div class="glass rounded-xl p-4">
+                <div class="text-[10px] uppercase tracking-wider text-slate-500 font-semibold mb-1">Settlement range</div>
+                <div id="lv-range" class="text-base font-semibold text-white">—</div>
+                <div class="text-[11px] text-slate-500 mt-0.5">Target: <span id="lv-target">—</span></div>
+              </div>
+              <div class="glass rounded-xl p-4">
+                <div class="text-[10px] uppercase tracking-wider text-slate-500 font-semibold mb-1">You'd save</div>
+                <div id="lv-saved" class="text-2xl font-bold gradient-text">$0</div>
+                <div id="lv-saved-pct" class="text-[11px] text-slate-500 mt-0.5">— of balance</div>
+              </div>
+            </div>
+
+            <div id="lv-factors" class="flex flex-wrap gap-1.5 mt-4"></div>
+            <div id="lv-notes" class="hidden mt-3 text-xs text-amber-300/90 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2"></div>
+          </div>
+
+          <!-- Settlement scenarios -->
+          <div>
+            <div class="text-xs uppercase tracking-wider text-slate-500 font-bold mb-3">Possible outcomes</div>
+            <div class="grid grid-cols-3 gap-3">
+              <div class="glass rounded-xl p-4">
+                <div class="text-[11px] text-emerald-300 font-semibold uppercase tracking-wider">Best case</div>
+                <div id="sc-best-amount" class="text-lg font-bold text-white mt-1.5">—</div>
+                <div id="sc-best-saved" class="text-[11px] text-emerald-300 mt-0.5">—</div>
+              </div>
+              <div class="glass rounded-xl p-4 ring-1 ring-fuchsia-400/30 bg-fuchsia-500/5">
+                <div class="text-[11px] text-fuchsia-300 font-semibold uppercase tracking-wider">Target</div>
+                <div id="sc-target-amount" class="text-lg font-bold text-white mt-1.5">—</div>
+                <div id="sc-target-saved" class="text-[11px] text-fuchsia-300 mt-0.5">—</div>
+              </div>
+              <div class="glass rounded-xl p-4">
+                <div class="text-[11px] text-slate-400 font-semibold uppercase tracking-wider">Worst case</div>
+                <div id="sc-worst-amount" class="text-lg font-bold text-white mt-1.5">—</div>
+                <div id="sc-worst-saved" class="text-[11px] text-slate-400 mt-0.5">—</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Script -->
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <div>
+                <div class="text-xs uppercase tracking-wider text-slate-500 font-bold">Your call script</div>
+                <div id="script-source-label" class="text-[11px] text-slate-500 mt-0.5">—</div>
+              </div>
+              <button id="copy-script" class="text-xs font-semibold px-3 py-1.5 rounded-lg border border-white/10 text-slate-200 hover:bg-white/5 transition flex items-center gap-1.5">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                <span id="copy-label">Copy</span>
+              </button>
+            </div>
+            <div id="script-sections" class="space-y-4"></div>
+          </div>
+
+          <div class="pt-4 border-t border-white/5 text-[11px] text-slate-500 leading-relaxed">
+            Settlement ranges reflect typical creditor behaviour for unsecured consumer debt. Actual outcomes depend on account age, delinquency status, and the specific creditor. Always get any agreement in writing before sending payment.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer class="py-12 border-t border-white/5 mt-12">
+    <div class="max-w-6xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-slate-500">
+      <div class="flex items-center gap-2">
+        <div class="w-6 h-6 rounded-md bg-gradient-to-br from-indigo-500 to-fuchsia-500"></div>
+        <span>DebtClear · Built for the Nexora Innovation Summit 2026</span>
+      </div>
+      <div class="flex items-center gap-6">
+        <span>Django · DRF · AWS Bedrock · Claude Sonnet 4.6</span>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // ----- Smooth scroll -----
+    const lenis = new Lenis({ smoothWheel: true, lerp: 0.09 });
+    function raf(t) { lenis.raf(t); requestAnimationFrame(raf); }
+    requestAnimationFrame(raf);
+    document.querySelectorAll('a[href^="#"]').forEach(a => {
+      a.addEventListener('click', e => {
+        const id = a.getAttribute('href');
+        if (id.length > 1) {
+          const el = document.querySelector(id);
+          if (el) { e.preventDefault(); lenis.scrollTo(el, { offset: -72 }); }
+        }
+      });
+    });
+
+    // ----- Hero animation -----
+    gsap.set('[data-anim]', { opacity: 0, y: 24 });
+    gsap.to('[data-anim="hero-tag"]',  { opacity: 1, y: 0, duration: 0.6, delay: 0.05, ease: 'power3.out' });
+    gsap.to('[data-anim="hero-h1"]',   { opacity: 1, y: 0, duration: 0.8, delay: 0.15, ease: 'power3.out' });
+    gsap.to('[data-anim="hero-sub"]',  { opacity: 1, y: 0, duration: 0.8, delay: 0.30, ease: 'power3.out' });
+    gsap.to('[data-anim="hero-cta"]',  { opacity: 1, y: 0, duration: 0.6, delay: 0.45, ease: 'power3.out' });
+    gsap.to('[data-anim="hero-stats"]',{ opacity: 1, y: 0, duration: 0.7, delay: 0.6,  ease: 'power3.out' });
+
+    // ----- Form: dynamic debts -----
+    const debtList = document.getElementById('debt-list');
+    const form = document.getElementById('debt-form');
+    const errorBox = document.getElementById('form-error');
+    let debtId = 0;
+
+    function addDebtRow(prefill) {
+      const id = ++debtId;
+      const wrap = document.createElement('div');
+      wrap.className = 'glass rounded-xl p-4 grid grid-cols-1 md:grid-cols-12 gap-3 items-end';
+      wrap.dataset.row = id;
+      wrap.innerHTML = `
+        <div class="md:col-span-4">
+          <label class="block text-[11px] font-medium text-slate-400 mb-1.5 uppercase tracking-wider">Name</label>
+          <input name="name" type="text" required maxlength="40" value="${prefill?.name || ''}" placeholder="Credit Card" class="input-base w-full px-3 py-2.5 rounded-lg text-sm" />
+        </div>
+        <div class="md:col-span-3">
+          <label class="block text-[11px] font-medium text-slate-400 mb-1.5 uppercase tracking-wider">Balance</label>
+          <div class="relative">
+            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 font-mono text-sm">$</span>
+            <input name="balance" type="number" min="1" step="50" required value="${prefill?.balance ?? ''}" class="input-base w-full pl-7 pr-3 py-2.5 rounded-lg text-sm" />
+          </div>
+        </div>
+        <div class="md:col-span-2">
+          <label class="block text-[11px] font-medium text-slate-400 mb-1.5 uppercase tracking-wider">APR</label>
+          <div class="relative">
+            <input name="rate" type="number" min="0" max="100" step="0.01" required value="${prefill?.rate ?? ''}" class="input-base w-full pl-3 pr-7 py-2.5 rounded-lg text-sm" />
+            <span class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 font-mono text-sm">%</span>
+          </div>
+        </div>
+        <div class="md:col-span-2">
+          <label class="block text-[11px] font-medium text-slate-400 mb-1.5 uppercase tracking-wider">Min/mo</label>
+          <div class="relative">
+            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 font-mono text-sm">$</span>
+            <input name="min_payment" type="number" min="1" step="5" required value="${prefill?.min_payment ?? ''}" class="input-base w-full pl-7 pr-3 py-2.5 rounded-lg text-sm" />
+          </div>
+        </div>
+        <div class="md:col-span-1 flex md:justify-end">
+          <button type="button" data-remove class="text-slate-500 hover:text-rose-300 transition w-9 h-9 rounded-lg grid place-items-center border border-white/5 hover:border-rose-400/30" title="Remove">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M10 11v6M14 11v6"/></svg>
+          </button>
+        </div>`;
+      wrap.querySelector('[data-remove]').addEventListener('click', () => {
+        if (debtList.children.length === 1) return;
+        gsap.to(wrap, { opacity: 0, height: 0, marginTop: 0, padding: 0, duration: 0.25, onComplete: () => wrap.remove() });
+      });
+      debtList.appendChild(wrap);
+      gsap.from(wrap, { opacity: 0, y: 12, duration: 0.35, ease: 'power2.out' });
+    }
+
+    // Seed two example debts.
+    addDebtRow({ name: 'Credit Card', balance: 5000, rate: 22.99, min_payment: 100 });
+    addDebtRow({ name: 'Student Loan', balance: 15000, rate: 6.5, min_payment: 200 });
+
+    document.getElementById('add-debt').addEventListener('click', () => addDebtRow());
+
+    // ----- Submit -----
+    const submitBtn = document.getElementById('submit-btn');
+    const spinner = document.getElementById('submit-spinner');
+    const submitLabel = document.getElementById('submit-label');
+    const submitStatus = document.getElementById('submit-status');
+    const resultsSection = document.getElementById('results');
+
+    function showError(msg) {
+      errorBox.textContent = msg;
+      errorBox.classList.remove('hidden');
+      gsap.from(errorBox, { opacity: 0, y: -6, duration: 0.25 });
+    }
+    function clearError() { errorBox.classList.add('hidden'); errorBox.textContent = ''; }
+
+    function fmtMoney(n) {
+      return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n);
+    }
+    function fmtMoneyExact(n) {
+      return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n);
+    }
+    function fmtMonths(m) {
+      if (m < 12) return `${m} mo`;
+      const y = Math.floor(m / 12), r = m % 12;
+      return r ? `${y}y ${r}mo` : `${y}y`;
+    }
+
+    let donutChart = null, lineChart = null;
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      clearError();
+
+      const fd = new FormData(form);
+      const monthlyIncome = Number(fd.get('monthly_income'));
+      const extraPayment = Number(fd.get('extra_payment'));
+
+      const rows = [...debtList.querySelectorAll('[data-row]')];
+      const debts = rows.map(r => ({
+        name: r.querySelector('[name=name]').value.trim() || 'Debt',
+        balance: Number(r.querySelector('[name=balance]').value),
+        rate: Number(r.querySelector('[name=rate]').value),
+        min_payment: Number(r.querySelector('[name=min_payment]').value),
+      }));
+
+      if (!debts.length) { showError('Add at least one debt to analyze.'); return; }
+      for (const d of debts) {
+        if (!(d.balance > 0) || !(d.min_payment > 0) || !(d.rate >= 0)) {
+          showError(`Check the values for "${d.name}" — every field must be a positive number.`);
+          return;
+        }
+      }
+
+      submitBtn.disabled = true;
+      spinner.classList.remove('hidden');
+      submitLabel.textContent = 'Analyzing…';
+      submitStatus.classList.remove('hidden');
+      submitStatus.textContent = 'Running simulations and consulting Claude…';
+
+      try {
+        const res = await fetch('/api/analyze/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ monthly_income: monthlyIncome, extra_payment: extraPayment, debts }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          showError(data.error || 'Something went wrong analyzing your debts.');
+          return;
+        }
+        renderResults(data);
+      } catch (err) {
+        console.error(err);
+        showError('Network error reaching the analysis API. Try again.');
+      } finally {
+        submitBtn.disabled = false;
+        spinner.classList.add('hidden');
+        submitLabel.textContent = 'Analyze My Debt';
+        submitStatus.classList.add('hidden');
+      }
+    });
+
+    document.getElementById('reset-btn').addEventListener('click', () => {
+      lenis.scrollTo('#analyze', { offset: -72 });
+    });
+
+    function stressColor(score) {
+      if (score < 35) return { stroke: '#22c55e', label: 'Healthy', text: 'text-emerald-300' };
+      if (score < 60) return { stroke: '#eab308', label: 'Manageable', text: 'text-amber-300' };
+      if (score < 80) return { stroke: '#f97316', label: 'Elevated', text: 'text-orange-300' };
+      return { stroke: '#ef4444', label: 'Critical', text: 'text-rose-300' };
+    }
+
+    function renderResults(d) {
+      // Top headline
+      const saved = Math.max(0, d.interest_saved);
+      const savedEl = document.getElementById('r-saved');
+      const subEl = document.getElementById('r-saved-sub');
+      if (saved > 0) {
+        savedEl.textContent = fmtMoneyExact(saved);
+        subEl.textContent = `Plus ${d.months_saved} fewer month${d.months_saved === 1 ? '' : 's'} in debt — by choosing ${d.recommended_strategy.charAt(0).toUpperCase() + d.recommended_strategy.slice(1)}.`;
+      } else {
+        savedEl.textContent = fmtMoneyExact(0);
+        subEl.textContent = `Your debts converge: both strategies cost about the same. ${d.recommended_strategy.charAt(0).toUpperCase() + d.recommended_strategy.slice(1)} edges out by a hair.`;
+      }
+
+      // Stress score ring
+      const sc = stressColor(d.stress_score);
+      const C = 2 * Math.PI * 42;
+      const circle = document.getElementById('stress-circle');
+      circle.setAttribute('stroke', sc.stroke);
+      const offset = C * (1 - d.stress_score / 100);
+      gsap.fromTo(circle, { strokeDashoffset: C }, { strokeDashoffset: offset, duration: 1.1, ease: 'power3.out' });
+      const valEl = document.getElementById('stress-value');
+      const valObj = { v: 0 };
+      gsap.to(valObj, { v: d.stress_score, duration: 1.1, ease: 'power3.out', onUpdate: () => valEl.textContent = Math.round(valObj.v) });
+      const labelEl = document.getElementById('stress-label');
+      labelEl.textContent = sc.label;
+      labelEl.className = `text-base font-semibold ${sc.text}`;
+
+      // Top stats
+      document.getElementById('r-total-debt').textContent = fmtMoneyExact(d.total_debt);
+      document.getElementById('r-debt-meta').textContent = `across ${d.debts.length} balance${d.debts.length === 1 ? '' : 's'} · ${fmtMoneyExact(d.extra_payment)}/mo extra`;
+      document.getElementById('r-weighted-rate').textContent = `${d.weighted_avg_rate.toFixed(2)}%`;
+
+      // Strategy cards
+      document.getElementById('ava-months').textContent = fmtMonths(d.avalanche.months);
+      document.getElementById('ava-interest').textContent = fmtMoneyExact(d.avalanche.total_interest);
+      document.getElementById('ava-order').textContent = d.avalanche.payoff_order.join(' → ') || '—';
+
+      document.getElementById('sno-months').textContent = fmtMonths(d.snowball.months);
+      document.getElementById('sno-interest').textContent = fmtMoneyExact(d.snowball.total_interest);
+      document.getElementById('sno-order').textContent = d.snowball.payoff_order.join(' → ') || '—';
+
+      const avaCard = document.getElementById('card-avalanche');
+      const snoCard = document.getElementById('card-snowball');
+      avaCard.classList.remove('winner-glow');
+      snoCard.classList.remove('winner-glow');
+      document.getElementById('badge-avalanche').classList.add('hidden');
+      document.getElementById('badge-snowball').classList.add('hidden');
+      if (d.recommended_strategy === 'avalanche') {
+        avaCard.classList.add('winner-glow');
+        document.getElementById('badge-avalanche').classList.remove('hidden');
+      } else {
+        snoCard.classList.add('winner-glow');
+        document.getElementById('badge-snowball').classList.remove('hidden');
+      }
+
+      // Donut
+      if (donutChart) donutChart.destroy();
+      const donutCtx = document.getElementById('chart-donut');
+      const palette = ['#818cf8', '#c084fc', '#f472b6', '#fb923c', '#34d399', '#60a5fa', '#facc15', '#f87171'];
+      donutChart = new Chart(donutCtx, {
+        type: 'doughnut',
+        data: {
+          labels: d.debts.map(x => x.name),
+          datasets: [{
+            data: d.debts.map(x => x.balance),
+            backgroundColor: d.debts.map((_, i) => palette[i % palette.length]),
+            borderColor: '#0a0c14',
+            borderWidth: 3,
+            hoverOffset: 8,
+          }],
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false, cutout: '68%',
+          plugins: {
+            legend: { position: 'bottom', labels: { color: '#cbd5e1', usePointStyle: true, padding: 14, font: { family: 'Inter', size: 12 } } },
+            tooltip: {
+              backgroundColor: '#0a0c14', borderColor: 'rgba(148,163,184,0.15)', borderWidth: 1,
+              padding: 12, titleColor: '#fff', bodyColor: '#cbd5e1',
+              callbacks: { label: (ctx) => `${ctx.label}: ${fmtMoneyExact(ctx.parsed)}` },
+            },
+          },
+          animation: { animateRotate: true, duration: 900 },
+        },
+      });
+
+      // Line chart
+      if (lineChart) lineChart.destroy();
+      const lineCtx = document.getElementById('chart-line');
+      const labels = Array.from({ length: Math.max(d.avalanche.payoff_timeline.length, d.snowball.payoff_timeline.length) }, (_, i) => i);
+      lineChart = new Chart(lineCtx, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [
+            {
+              label: 'Avalanche',
+              data: d.avalanche.payoff_timeline,
+              borderColor: '#34d399',
+              backgroundColor: 'rgba(52, 211, 153, 0.10)',
+              fill: true, tension: 0.25, pointRadius: 0, borderWidth: 2.5,
+            },
+            {
+              label: 'Snowball',
+              data: d.snowball.payoff_timeline,
+              borderColor: '#818cf8',
+              backgroundColor: 'rgba(129, 140, 248, 0.08)',
+              fill: true, tension: 0.25, pointRadius: 0, borderWidth: 2.5, borderDash: [4, 4],
+            },
+          ],
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: '#0a0c14', borderColor: 'rgba(148,163,184,0.15)', borderWidth: 1,
+              padding: 12, titleColor: '#fff', bodyColor: '#cbd5e1',
+              callbacks: {
+                title: (items) => `Month ${items[0].label}`,
+                label: (ctx) => `${ctx.dataset.label}: ${fmtMoneyExact(ctx.parsed.y)}`,
+              },
+            },
+          },
+          scales: {
+            x: { grid: { color: 'rgba(148,163,184,0.06)' }, ticks: { color: '#64748b', maxTicksLimit: 10 }, title: { display: true, text: 'Months', color: '#64748b', font: { size: 11 } } },
+            y: { grid: { color: 'rgba(148,163,184,0.06)' }, ticks: { color: '#64748b', callback: v => fmtMoney(v) } },
+          },
+          animation: { duration: 1000 },
+        },
+      });
+
+      // Negotiate Mode — render per-debt cards
+      renderDebtCards(d);
+
+      // AI text — split into paragraphs.
+      const aiBox = document.getElementById('ai-analysis');
+      aiBox.innerHTML = '';
+      const paragraphs = d.ai_analysis.split(/\n{2,}/).map(p => p.trim()).filter(Boolean);
+      paragraphs.forEach(p => {
+        const el = document.createElement('p');
+        el.textContent = p;
+        aiBox.appendChild(el);
+      });
+      const sourceLabel = document.getElementById('ai-source-label');
+      sourceLabel.textContent = d.ai_source === 'bedrock'
+        ? 'Anthropic Claude Sonnet 4.6 · AWS Bedrock'
+        : 'Deterministic advisor (set AWS credentials to enable Claude)';
+
+      // Cache the analysis context for negotiate calls.
+      window.__debtClearContext = {
+        monthly_income: d.monthly_income,
+        total_debt: d.total_debt,
+        stress_score: d.stress_score,
+        debt_count: d.debts.length,
+      };
+
+      // Reveal
+      resultsSection.hidden = false;
+      gsap.set('[data-result]', { opacity: 0, y: 24 });
+      gsap.to('[data-result]', { opacity: 1, y: 0, duration: 0.55, stagger: 0.08, ease: 'power3.out' });
+      setTimeout(() => lenis.scrollTo(resultsSection, { offset: -72 }), 80);
+    }
+
+    // ---------- Negotiate Mode ----------
+    const debtCardsEl = document.getElementById('debt-cards');
+    const modal = document.getElementById('negotiate-modal');
+    const modalCard = document.getElementById('modal-card');
+    const modalBackdrop = document.getElementById('modal-backdrop');
+    const modalClose = document.getElementById('modal-close');
+    const modalLoading = document.getElementById('modal-loading');
+    const modalError = document.getElementById('modal-error');
+    const modalErrorMsg = document.getElementById('modal-error-msg');
+    const modalRetry = document.getElementById('modal-retry');
+    const modalContent = document.getElementById('modal-content');
+    const copyBtn = document.getElementById('copy-script');
+    const copyLabel = document.getElementById('copy-label');
+
+    let lastNegotiateDebt = null;
+    let lastScriptText = '';
+
+    function renderDebtCards(d) {
+      debtCardsEl.innerHTML = '';
+      d.debts.forEach(debt => {
+        const card = document.createElement('div');
+        card.className = 'glass rounded-2xl p-5 flex flex-col';
+        card.innerHTML = `
+          <div class="flex items-start justify-between gap-3 mb-3">
+            <div class="min-w-0">
+              <div class="text-[10px] uppercase tracking-wider text-slate-500 font-semibold">${escapeHtml(detectTypeLabel(debt.name))}</div>
+              <div class="text-base font-semibold text-white truncate" title="${escapeHtml(debt.name)}">${escapeHtml(debt.name)}</div>
+            </div>
+            <div class="text-right shrink-0">
+              <div class="text-lg font-bold text-white">${fmtMoneyExact(debt.balance)}</div>
+              <div class="text-[11px] text-slate-500">${debt.rate.toFixed(2)}% APR</div>
+            </div>
+          </div>
+          <div class="flex-1 grid grid-cols-2 gap-3 text-xs text-slate-400 mb-4">
+            <div><span class="text-slate-500">Min/mo</span><div class="text-slate-200 font-medium mt-0.5">${fmtMoneyExact(debt.min_payment)}</div></div>
+            <div><span class="text-slate-500">Settlement target</span><div class="text-slate-200 font-medium mt-0.5">${settlementTargetFor(debt.name)}</div></div>
+          </div>
+          <button data-negotiate class="btn-primary text-white text-sm font-semibold py-2.5 rounded-xl flex items-center justify-center gap-2">
+            <span>💬</span> Negotiate this debt
+          </button>`;
+        card.querySelector('[data-negotiate]').addEventListener('click', () => openNegotiate(debt));
+        debtCardsEl.appendChild(card);
+      });
+    }
+
+    // Lightweight client-side mirror of detect_debt_type for the card preview.
+    const TYPE_HINTS = [
+      { type: 'Medical debt',          rx: /\b(medical|hospital|doctor|clinic|health|dental|physician)\b/i },
+      { type: 'Federal student loan',  rx: /\b(fafsa|stafford|perkins|federal student|direct loan)\b/i },
+      { type: 'Credit card',           rx: /\b(credit|card|visa|mastercard|amex|discover|chase|capital one|citi|barclays|synchrony|comenity)\b/i },
+      { type: 'Private student loan',  rx: /\b(student|tuition|sallie|navient|earnest|college ave|education)\b/i },
+      { type: 'Auto loan',             rx: /\b(auto|car|vehicle|truck|motorcycle|carmax)\b/i },
+      { type: 'Personal loan',         rx: /\b(personal|lendingclub|prosper|upstart|marcus|loan|lending)\b/i },
+    ];
+    function detectTypeLabel(name) {
+      const lower = (name || '').toLowerCase();
+      for (const h of TYPE_HINTS) if (h.rx.test(lower)) return h.type;
+      return 'Consumer debt';
+    }
+
+    // Quick-look settlement target for the card (server is authoritative).
+    function settlementTargetFor(name) {
+      const t = detectTypeLabel(name);
+      const map = {
+        'Credit card': '~50%', 'Personal loan': '~60%', 'Medical debt': '~35%',
+        'Auto loan': '~78%', 'Private student loan': '~70%',
+        'Federal student loan': 'IDR plan',
+        'Consumer debt': '~60%',
+      };
+      return map[t] || '~60%';
+    }
+
+    function escapeHtml(s) {
+      return String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[c]);
+    }
+
+    function openNegotiate(debt) {
+      lastNegotiateDebt = debt;
+      modal.hidden = false;
+      lenis.stop();
+      document.body.style.overflow = 'hidden';
+
+      modalLoading.hidden = false;
+      modalError.hidden = true;
+      modalContent.hidden = true;
+
+      gsap.fromTo(modalCard,
+        { opacity: 0, y: 24, scale: 0.98 },
+        { opacity: 1, y: 0, scale: 1, duration: 0.35, ease: 'power3.out' });
+
+      fetchNegotiate(debt);
+    }
+
+    function closeNegotiate() {
+      gsap.to(modalCard, {
+        opacity: 0, y: 24, scale: 0.98, duration: 0.22, ease: 'power2.in',
+        onComplete: () => {
+          modal.hidden = true;
+          lenis.start();
+          document.body.style.overflow = '';
+        },
+      });
+    }
+
+    modalClose.addEventListener('click', closeNegotiate);
+    modalBackdrop.addEventListener('click', closeNegotiate);
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && !modal.hidden) closeNegotiate(); });
+    modalRetry.addEventListener('click', () => { if (lastNegotiateDebt) fetchNegotiate(lastNegotiateDebt); });
+
+    async function fetchNegotiate(debt) {
+      modalLoading.hidden = false;
+      modalError.hidden = true;
+      modalContent.hidden = true;
+
+      const ctx = window.__debtClearContext || {};
+      try {
+        const res = await fetch('/api/negotiate/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            debt: { name: debt.name, balance: debt.balance, rate: debt.rate, min_payment: debt.min_payment },
+            financial_context: {
+              monthly_income: ctx.monthly_income,
+              total_debt: ctx.total_debt,
+              stress_score: ctx.stress_score,
+            },
+            debt_count: ctx.debt_count || 1,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Negotiate API error');
+        renderNegotiate(debt, data);
+      } catch (err) {
+        modalLoading.hidden = true;
+        modalError.hidden = false;
+        modalErrorMsg.textContent = err.message || 'Network error.';
+      }
+    }
+
+    function renderNegotiate(debt, d) {
+      modalLoading.hidden = true;
+      modalError.hidden = true;
+
+      // Header
+      document.getElementById('modal-debt-name').textContent = debt.name;
+      document.getElementById('modal-debt-meta').textContent =
+        `${fmtMoneyExact(debt.balance)} balance · ${debt.rate.toFixed(2)}% APR · ${fmtMoneyExact(debt.min_payment)}/mo minimum`;
+
+      // Leverage
+      const la = d.leverage_analysis;
+      document.getElementById('lv-type').textContent = la.debt_type_label;
+      document.getElementById('lv-score').textContent = la.leverage_score;
+      const bar = document.getElementById('lv-bar');
+      requestAnimationFrame(() => { bar.style.width = la.leverage_score + '%'; });
+      document.getElementById('lv-range').textContent = `${la.settlement_low}–${la.settlement_high}%`;
+      document.getElementById('lv-target').textContent = `${la.settlement_target}%`;
+      document.getElementById('lv-saved').textContent = fmtMoneyExact(d.savings.dollars_saved);
+      document.getElementById('lv-saved-pct').textContent = `${d.savings.percentage_saved}% off balance`;
+
+      const factorsBox = document.getElementById('lv-factors');
+      factorsBox.innerHTML = '';
+      la.hardship_factors.forEach(f => {
+        const el = document.createElement('span');
+        el.className = 'text-[11px] font-medium text-slate-200 bg-white/5 border border-white/10 rounded-full px-2.5 py-1';
+        el.textContent = f;
+        factorsBox.appendChild(el);
+      });
+
+      const notesBox = document.getElementById('lv-notes');
+      if (la.notes && la.notes.length) {
+        notesBox.textContent = la.notes.join(' ');
+        notesBox.hidden = false;
+      } else {
+        notesBox.hidden = true;
+      }
+
+      // Scenarios
+      const r = d.savings_range;
+      document.getElementById('sc-best-amount').textContent = fmtMoneyExact(r.best_case.settlement_amount);
+      document.getElementById('sc-best-saved').textContent  = `Save ${fmtMoneyExact(r.best_case.dollars_saved)}`;
+      document.getElementById('sc-target-amount').textContent = fmtMoneyExact(r.target.settlement_amount);
+      document.getElementById('sc-target-saved').textContent  = `Save ${fmtMoneyExact(r.target.dollars_saved)}`;
+      document.getElementById('sc-worst-amount').textContent = fmtMoneyExact(r.worst_case.settlement_amount);
+      document.getElementById('sc-worst-saved').textContent  = `Save ${fmtMoneyExact(r.worst_case.dollars_saved)}`;
+
+      // Script sections
+      const sectionsHost = document.getElementById('script-sections');
+      sectionsHost.innerHTML = '';
+      const sectionPalette = {
+        opening:         { dot: 'bg-indigo-400',   label: 'text-indigo-300' },
+        hardship:        { dot: 'bg-fuchsia-400',  label: 'text-fuchsia-300' },
+        initial_offer:   { dot: 'bg-emerald-400',  label: 'text-emerald-300' },
+        if_they_say_no:  { dot: 'bg-amber-400',    label: 'text-amber-300' },
+        if_they_counter: { dot: 'bg-orange-400',   label: 'text-orange-300' },
+        closing:         { dot: 'bg-sky-400',      label: 'text-sky-300' },
+        avoid:           { dot: 'bg-rose-400',     label: 'text-rose-300' },
+      };
+
+      const lines = [];
+      d.script.section_order.forEach(({ key, title }) => {
+        const body = (d.script.sections[key] || '').trim();
+        if (!body) return;
+        const palette = sectionPalette[key] || { dot: 'bg-slate-400', label: 'text-slate-300' };
+        const block = document.createElement('div');
+        block.className = 'glass rounded-xl p-4 md:p-5';
+        const header = document.createElement('div');
+        header.className = 'flex items-center gap-2 mb-2';
+        header.innerHTML = `<span class="w-1.5 h-1.5 rounded-full ${palette.dot}"></span><span class="text-[11px] uppercase tracking-widest font-bold ${palette.label}">${escapeHtml(title)}</span>`;
+        block.appendChild(header);
+
+        if (key === 'avoid') {
+          const ul = document.createElement('ul');
+          ul.className = 'space-y-1.5 text-[14px] text-slate-200 leading-relaxed';
+          body.split(/\n/).map(s => s.replace(/^[-•]\s*/, '').trim()).filter(Boolean).forEach(item => {
+            const li = document.createElement('li');
+            li.className = 'flex gap-2';
+            li.innerHTML = `<span class="text-rose-400 mt-1">×</span><span>${escapeHtml(item)}</span>`;
+            ul.appendChild(li);
+          });
+          block.appendChild(ul);
+        } else {
+          const p = document.createElement('p');
+          p.className = 'text-[14px] text-slate-200 leading-relaxed whitespace-pre-line';
+          p.innerHTML = highlightMoney(escapeHtml(body));
+          block.appendChild(p);
+        }
+        sectionsHost.appendChild(block);
+        lines.push(`${title}\n${body}`);
+      });
+
+      lastScriptText = lines.join('\n\n');
+      document.getElementById('script-source-label').textContent = d.script.source === 'bedrock'
+        ? 'Generated by Claude Sonnet 4.6 · AWS Bedrock'
+        : 'Deterministic generator (set AWS credentials to enable Claude)';
+
+      modalContent.hidden = false;
+      gsap.fromTo(modalContent,
+        { opacity: 0, y: 12 },
+        { opacity: 1, y: 0, duration: 0.4, ease: 'power3.out' });
+    }
+
+    function highlightMoney(htmlStr) {
+      return htmlStr.replace(/(\$[\d,]+(?:\.\d{2})?)/g,
+        '<span class="font-mono text-white bg-white/5 px-1 rounded">$1</span>');
+    }
+
+    copyBtn.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(lastScriptText);
+        copyLabel.textContent = 'Copied';
+        setTimeout(() => { copyLabel.textContent = 'Copy'; }, 1600);
+      } catch {
+        copyLabel.textContent = 'Press ⌘C';
+      }
+    });
+  </script>
+</body>
+</html>

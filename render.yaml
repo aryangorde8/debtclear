@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: debtclear
+    runtime: python
+    plan: free
+    region: oregon
+    buildCommand: "pip install -r requirements.txt && python manage.py collectstatic --noinput"
+    startCommand: "gunicorn core.wsgi --bind 0.0.0.0:$PORT --workers 2 --timeout 120"
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.3
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+      - key: DJANGO_DEBUG
+        value: "False"
+      - key: DJANGO_ALLOWED_HOSTS
+        value: ".onrender.com"
+      - key: AWS_REGION
+        value: us-east-1
+      - key: BEDROCK_MODEL_ID
+        value: anthropic.claude-sonnet-4-6
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
