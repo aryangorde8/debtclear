@@ -97,9 +97,12 @@ export function NegotiateModal({ debt, financialContext, debtCount, onClose }: P
                     AI will analyze your leverage and write a complete, word-for-word phone script to settle this debt for less.
                   </p>
                 </div>
-                <Button size="lg" variant="gradient" onClick={load}>
+                <button
+                  onClick={load}
+                  className="relative px-8 py-3 bg-white text-black rounded-full font-semibold text-base flex items-center gap-2 transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-white/20"
+                >
                   <Sparkles className="h-4 w-4" /> Generate Script
-                </Button>
+                </button>
               </div>
             )}
 
