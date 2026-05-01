@@ -8,7 +8,20 @@ const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "DebtClear — Crush Your Debt Intelligently",
-  description: "AI-powered debt payoff simulator. Avalanche vs Snowball, stress scoring, and negotiation scripts.",
+  description: "Model Avalanche vs Snowball strategies with real math, get a personalized AI stress score, and generate a word-for-word negotiation script to settle your debt for less.",
+  keywords: ["debt payoff", "avalanche method", "snowball method", "debt negotiation", "financial planning", "AI finance"],
+  openGraph: {
+    title: "DebtClear — Crush Your Debt Intelligently",
+    description: "AI-powered debt payoff simulator with real math, stress scoring, and phone-ready negotiation scripts.",
+    type: "website",
+    url: "https://debtclear.aryangorde.com",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "DebtClear — Crush Your Debt Intelligently",
+    description: "AI-powered debt payoff simulator with real math, stress scoring, and phone-ready negotiation scripts.",
+  },
+  metadataBase: new URL("https://debtclear.aryangorde.com"),
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

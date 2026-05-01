@@ -1,12 +1,64 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Trash2, Loader2, ArrowRight, DollarSign, Percent, CreditCard, Wallet } from "lucide-react";
+import { Plus, Trash2, Loader2, ArrowRight, DollarSign, CreditCard, Wallet, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Debt, AnalyzePayload, AnalyzeResult } from "@/types";
 import { analyze } from "@/lib/api";
 import { toast } from "sonner";
+
+const LOADING_STEPS = [
+  "Running Avalanche simulation…",
+  "Running Snowball simulation…",
+  "Calculating financial stress score…",
+  "Generating AI analysis…",
+];
+
+function LoadingOverlay() {
+  const [step, setStep] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setStep((s) => Math.min(s + 1, LOADING_STEPS.length - 1));
+    }, 900);
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
+    >
+      <div className="flex flex-col items-center gap-6 p-8 max-w-sm w-full mx-4">
+        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500/20 to-violet-500/20 border border-white/10 flex items-center justify-center">
+          <Loader2 className="h-8 w-8 text-blue-400 animate-spin" />
+        </div>
+        <div className="w-full space-y-3">
+          {LOADING_STEPS.map((s, i) => (
+            <motion.div
+              key={s}
+              initial={{ opacity: 0, x: -12 }}
+              animate={{ opacity: i <= step ? 1 : 0.25, x: 0 }}
+              transition={{ delay: i * 0.1 }}
+              className="flex items-center gap-3"
+            >
+              {i < step ? (
+                <CheckCircle2 className="h-4 w-4 text-emerald-400 flex-shrink-0" />
+              ) : i === step ? (
+                <Loader2 className="h-4 w-4 text-blue-400 animate-spin flex-shrink-0" />
+              ) : (
+                <div className="h-4 w-4 rounded-full border border-white/20 flex-shrink-0" />
+              )}
+              <span className={`text-sm ${i <= step ? "text-white" : "text-white/30"}`}>{s}</span>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+    </motion.div>
+  );
+}
 
 const EMPTY_DEBT: Debt = { name: "", balance: 0, rate: 0, min_payment: 0 };
 
@@ -42,6 +94,8 @@ export function DebtForm({ onResult }: Props) {
   };
 
   return (
+    <>
+    {loading && <LoadingOverlay />}
     <section id="form" className="relative py-32 px-4 overflow-hidden">
       <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent pointer-events-none" />
 
@@ -175,8 +229,8 @@ export function DebtForm({ onResult }: Props) {
                       </button>
                     )}
                   </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                    <div className="col-span-2 space-y-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="sm:col-span-3 space-y-2">
                       <label className="text-xs uppercase tracking-wider text-white/50">Name</label>
                       <Input
                         placeholder="Chase Sapphire Card"
@@ -186,7 +240,7 @@ export function DebtForm({ onResult }: Props) {
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-xs uppercase tracking-wider text-white/50">Balance</label>
+                      <label className="text-xs uppercase tracking-wider text-white/50">Balance ($)</label>
                       <div className="relative">
                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40 text-sm">$</span>
                         <Input
@@ -202,9 +256,7 @@ export function DebtForm({ onResult }: Props) {
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <label className="text-xs uppercase tracking-wider text-white/50 flex items-center gap-1">
-                        APR <Percent className="h-2.5 w-2.5" />
-                      </label>
+                      <label className="text-xs uppercase tracking-wider text-white/50">APR (%)</label>
                       <Input
                         type="number"
                         step="any"
@@ -217,8 +269,8 @@ export function DebtForm({ onResult }: Props) {
                         required
                       />
                     </div>
-                    <div className="col-span-2 sm:col-span-4 space-y-2">
-                      <label className="text-xs uppercase tracking-wider text-white/50">Min. Payment / month</label>
+                    <div className="space-y-2">
+                      <label className="text-xs uppercase tracking-wider text-white/50">Min. Payment ($)</label>
                       <div className="relative">
                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40 text-sm">$</span>
                         <Input
@@ -247,11 +299,7 @@ export function DebtForm({ onResult }: Props) {
               disabled={loading}
               className="relative px-10 py-4 bg-white text-black rounded-full font-semibold text-base flex items-center justify-center gap-2 transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-white/20 disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:scale-100"
             >
-              {loading ? (
-                <><Loader2 className="h-5 w-5 animate-spin" /> Running AI Analysis…</>
-              ) : (
-                <>Run Analysis <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" /></>
-              )}
+              <>Run Analysis <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" /></>
             </button>
           </div>
 
@@ -261,8 +309,8 @@ export function DebtForm({ onResult }: Props) {
         </motion.form>
       </div>
 
-      {/* Bottom fade-out */}
       <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent pointer-events-none" />
     </section>
+    </>
   );
 }
