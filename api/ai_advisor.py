@@ -1,52 +1,90 @@
 """
-Claude Sonnet 4.6 financial-advice integration via AWS Bedrock.
+AI financial-advice integration.
 
-If Bedrock credentials are missing or the call fails, we fall back to a
-data-driven advisor written in pure Python so the demo is always responsive.
+Priority: Groq (free, no CC) → Anthropic Claude → deterministic fallback.
+The fallback is always responsive so the demo never breaks.
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 import os
+import time
 from typing import Any, Dict
+
+_CACHE: dict = {}
+_CACHE_TTL = 3600
 
 logger = logging.getLogger(__name__)
 
-# Lazy boto3 import so dev environments without AWS still boot cleanly.
+
+def _cache_key(debt_data: Dict, results: Dict) -> str:
+    payload = {
+        "income": round(debt_data["monthly_income"]),
+        "extra": round(debt_data["extra_payment"]),
+        "debts": sorted(
+            [{"n": d["name"], "b": round(d["balance"]), "r": d["rate"]} for d in debt_data["debts"]],
+            key=lambda x: x["n"],
+        ),
+    }
+    return hashlib.md5(json.dumps(payload, sort_keys=True).encode()).hexdigest()
+
+
+def _get_cached(key: str):
+    entry = _CACHE.get(key)
+    if entry and time.time() - entry[1] < _CACHE_TTL:
+        return entry[0]
+    return None
+
+
+def _set_cached(key: str, value):
+    _CACHE[key] = (value, time.time())
+
+
+# ── Groq client ──────────────────────────────────────────────────────────────
+
 try:
-    import boto3
-    from botocore.config import Config as BotoConfig
-    from botocore.exceptions import BotoCoreError, ClientError
-except ImportError:  # pragma: no cover - boto3 is in requirements.txt
-    boto3 = None
-    BotoConfig = None
-    BotoCoreError = ClientError = Exception  # type: ignore
+    import groq as _groq_sdk
+except ImportError:
+    _groq_sdk = None
+
+_GROQ_CLIENT = None
 
 
-_BEDROCK_CLIENT = None
-
-
-def _get_client():
-    global _BEDROCK_CLIENT
-    if _BEDROCK_CLIENT is not None or boto3 is None:
-        return _BEDROCK_CLIENT
-
-    access_key = os.getenv("AWS_ACCESS_KEY_ID")
-    secret_key = os.getenv("AWS_SECRET_ACCESS_KEY")
-    if not access_key or not secret_key:
+def _get_groq_client():
+    global _GROQ_CLIENT
+    if _GROQ_CLIENT is not None or _groq_sdk is None:
+        return _GROQ_CLIENT
+    api_key = os.getenv("GROQ_API_KEY")
+    if not api_key:
         return None
+    _GROQ_CLIENT = _groq_sdk.Groq(api_key=api_key)
+    return _GROQ_CLIENT
 
-    region = os.getenv("AWS_REGION", "us-east-1")
-    _BEDROCK_CLIENT = boto3.client(
-        "bedrock-runtime",
-        region_name=region,
-        aws_access_key_id=access_key,
-        aws_secret_access_key=secret_key,
-        config=BotoConfig(read_timeout=30, connect_timeout=10, retries={"max_attempts": 2}),
-    )
-    return _BEDROCK_CLIENT
 
+# ── Anthropic client ──────────────────────────────────────────────────────────
+
+try:
+    import anthropic as _anthropic_sdk
+except ImportError:
+    _anthropic_sdk = None
+
+_ANTHROPIC_CLIENT = None
+
+
+def _get_anthropic_client():
+    global _ANTHROPIC_CLIENT
+    if _ANTHROPIC_CLIENT is not None or _anthropic_sdk is None:
+        return _ANTHROPIC_CLIENT
+    api_key = os.getenv("ANTHROPIC_API_KEY")
+    if not api_key:
+        return None
+    _ANTHROPIC_CLIENT = _anthropic_sdk.Anthropic(api_key=api_key)
+    return _ANTHROPIC_CLIENT
+
+
+# ── Prompt ────────────────────────────────────────────────────────────────────
 
 def _build_prompt(debt_data: Dict[str, Any], results: Dict[str, Any]) -> str:
     debt_lines = "\n".join(
@@ -84,8 +122,9 @@ def _build_prompt(debt_data: Dict[str, Any], results: Dict[str, Any]) -> str:
     )
 
 
+# ── Deterministic fallback ────────────────────────────────────────────────────
+
 def _fallback_analysis(debt_data: Dict[str, Any], results: Dict[str, Any]) -> str:
-    """Deterministic, data-driven advice when Bedrock is unavailable."""
     total = results["total_debt"]
     income = debt_data["monthly_income"]
     extra = debt_data["extra_payment"]
@@ -155,41 +194,54 @@ def _fallback_analysis(debt_data: Dict[str, Any], results: Dict[str, Any]) -> st
     return f"{para1}\n\n{para2}\n\n{para3}"
 
 
+# ── Public API ────────────────────────────────────────────────────────────────
+
 def analyze_with_claude(debt_data: Dict[str, Any], results: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    Returns a dict with `text` (the advice) and `source` ("bedrock" or "fallback")
-    so the UI can label the response transparently.
-    """
-    client = _get_client()
-    if client is None:
-        return {"text": _fallback_analysis(debt_data, results), "source": "fallback"}
+    """Returns {text, source} where source is 'groq', 'claude', 'fallback', or *_cached."""
+    key = _cache_key(debt_data, results)
+    cached = _get_cached(key)
+    if cached:
+        return {**cached, "source": cached["source"] + "_cached"}
 
-    model_id = os.getenv("BEDROCK_MODEL_ID", "anthropic.claude-sonnet-4-6")
     prompt = _build_prompt(debt_data, results)
-    body = {
-        "anthropic_version": "bedrock-2023-05-31",
-        "max_tokens": 800,
-        "temperature": 0.4,
-        "messages": [{"role": "user", "content": prompt}],
-    }
 
-    try:
-        response = client.invoke_model(
-            modelId=model_id,
-            body=json.dumps(body),
-            contentType="application/json",
-            accept="application/json",
-        )
-        payload = json.loads(response["body"].read())
-        blocks = payload.get("content", [])
-        text = "".join(b.get("text", "") for b in blocks if b.get("type") == "text").strip()
-        if not text:
-            raise ValueError("Empty completion from Bedrock")
-        return {"text": text, "source": "bedrock"}
-    except (ClientError, BotoCoreError, ValueError, KeyError, json.JSONDecodeError) as exc:
-        logger.warning("Bedrock invocation failed; using fallback analyzer: %s", exc)
-        return {
-            "text": _fallback_analysis(debt_data, results),
-            "source": "fallback",
-            "error": str(exc),
-        }
+    # 1. Try Groq (free tier, no CC required)
+    groq_client = _get_groq_client()
+    if groq_client:
+        try:
+            model = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+            completion = groq_client.chat.completions.create(
+                model=model,
+                messages=[{"role": "user", "content": prompt}],
+                max_tokens=800,
+                temperature=0.4,
+            )
+            text = (completion.choices[0].message.content or "").strip()
+            if text:
+                result = {"text": text, "source": "groq"}
+                _set_cached(key, result)
+                return result
+        except Exception as exc:
+            logger.warning("Groq API failed; trying Anthropic: %s", exc)
+
+    # 2. Try Anthropic Claude
+    anthropic_client = _get_anthropic_client()
+    if anthropic_client:
+        try:
+            model = os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-6")
+            message = anthropic_client.messages.create(
+                model=model,
+                max_tokens=800,
+                temperature=0.4,
+                messages=[{"role": "user", "content": prompt}],
+            )
+            text = (message.content[0].text if message.content else "").strip()
+            if text:
+                result = {"text": text, "source": "claude"}
+                _set_cached(key, result)
+                return result
+        except Exception as exc:
+            logger.warning("Anthropic API failed; using fallback: %s", exc)
+
+    # 3. Deterministic fallback
+    return {"text": _fallback_analysis(debt_data, results), "source": "fallback"}

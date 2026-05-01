@@ -15,11 +15,11 @@ services:
         value: "False"
       - key: DJANGO_ALLOWED_HOSTS
         value: ".onrender.com"
-      - key: AWS_REGION
-        value: us-east-1
-      - key: BEDROCK_MODEL_ID
-        value: anthropic.claude-sonnet-4-6
-      - key: AWS_ACCESS_KEY_ID
+      - key: GROQ_API_KEY
         sync: false
-      - key: AWS_SECRET_ACCESS_KEY
+      - key: GROQ_MODEL
+        value: llama-3.3-70b-versatile
+      - key: ANTHROPIC_API_KEY
         sync: false
+      - key: ANTHROPIC_MODEL
+        value: claude-sonnet-4-6

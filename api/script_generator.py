@@ -1,29 +1,46 @@
 """
-Negotiation script generation via Claude Sonnet 4.6 on AWS Bedrock.
+Negotiation script generation.
 
-The script is structured into named sections that the UI can render with clear
-visual hierarchy. We always return *all* expected sections — when Bedrock is
-unavailable or the LLM returns malformed output, a deterministic, data-driven
-fallback fills any missing section so the demo can never produce an empty card.
+Priority: Groq (free, no CC) → Anthropic Claude → deterministic fallback.
+All expected sections are always returned — missing ones from the LLM are
+filled deterministically so the UI never renders an empty card.
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 import os
 import re
+import time
 from typing import Any, Dict, List, Tuple
+
+_CACHE: dict = {}
+_CACHE_TTL = 3600
 
 logger = logging.getLogger(__name__)
 
-try:
-    import boto3
-    from botocore.config import Config as BotoConfig
-    from botocore.exceptions import BotoCoreError, ClientError
-except ImportError:  # pragma: no cover
-    boto3 = None
-    BotoConfig = None
-    BotoCoreError = ClientError = Exception  # type: ignore
+
+def _cache_key(debt: Dict, financial_context: Dict) -> str:
+    payload = {
+        "name": debt.get("name", ""),
+        "balance": round(float(debt.get("balance", 0))),
+        "rate": debt.get("rate"),
+        "income": round(float(financial_context.get("monthly_income", 0))),
+        "stress": financial_context.get("stress_score"),
+    }
+    return hashlib.md5(json.dumps(payload, sort_keys=True).encode()).hexdigest()
+
+
+def _get_cached(key: str):
+    entry = _CACHE.get(key)
+    if entry and time.time() - entry[1] < _CACHE_TTL:
+        return entry[0]
+    return None
+
+
+def _set_cached(key: str, value):
+    _CACHE[key] = (value, time.time())
 
 
 SECTION_ORDER: List[Tuple[str, str]] = [
@@ -38,27 +55,49 @@ SECTION_ORDER: List[Tuple[str, str]] = [
 SECTION_TITLES = {key: title for key, title in SECTION_ORDER}
 
 
-_BEDROCK_CLIENT = None
+# ── Groq client ───────────────────────────────────────────────────────────────
+
+try:
+    import groq as _groq_sdk
+except ImportError:
+    _groq_sdk = None
+
+_GROQ_CLIENT = None
 
 
-def _get_client():
-    global _BEDROCK_CLIENT
-    if _BEDROCK_CLIENT is not None or boto3 is None:
-        return _BEDROCK_CLIENT
-    access_key = os.getenv("AWS_ACCESS_KEY_ID")
-    secret_key = os.getenv("AWS_SECRET_ACCESS_KEY")
-    if not access_key or not secret_key:
+def _get_groq_client():
+    global _GROQ_CLIENT
+    if _GROQ_CLIENT is not None or _groq_sdk is None:
+        return _GROQ_CLIENT
+    api_key = os.getenv("GROQ_API_KEY")
+    if not api_key:
         return None
-    region = os.getenv("AWS_REGION", "us-east-1")
-    _BEDROCK_CLIENT = boto3.client(
-        "bedrock-runtime",
-        region_name=region,
-        aws_access_key_id=access_key,
-        aws_secret_access_key=secret_key,
-        config=BotoConfig(read_timeout=45, connect_timeout=10, retries={"max_attempts": 2}),
-    )
-    return _BEDROCK_CLIENT
+    _GROQ_CLIENT = _groq_sdk.Groq(api_key=api_key)
+    return _GROQ_CLIENT
 
+
+# ── Anthropic client ──────────────────────────────────────────────────────────
+
+try:
+    import anthropic as _anthropic_sdk
+except ImportError:
+    _anthropic_sdk = None
+
+_ANTHROPIC_CLIENT = None
+
+
+def _get_anthropic_client():
+    global _ANTHROPIC_CLIENT
+    if _ANTHROPIC_CLIENT is not None or _anthropic_sdk is None:
+        return _ANTHROPIC_CLIENT
+    api_key = os.getenv("ANTHROPIC_API_KEY")
+    if not api_key:
+        return None
+    _ANTHROPIC_CLIENT = _anthropic_sdk.Anthropic(api_key=api_key)
+    return _ANTHROPIC_CLIENT
+
+
+# ── Prompt & parsing ──────────────────────────────────────────────────────────
 
 def _build_prompt(
     debt: Dict[str, Any],
@@ -110,7 +149,6 @@ def _build_prompt(
 
 
 def _parse_sections(raw: str) -> Dict[str, str]:
-    """Extract sections from Claude's response by header."""
     if not raw:
         return {}
     pattern = re.compile(
@@ -137,6 +175,8 @@ def _parse_sections(raw: str) -> Dict[str, str]:
     return sections
 
 
+# ── Deterministic fallback ────────────────────────────────────────────────────
+
 def _fallback_sections(
     debt: Dict[str, Any],
     leverage: Dict[str, Any],
@@ -155,7 +195,6 @@ def _fallback_sections(
 
     income = float(financial_context.get("monthly_income", 0) or 0)
     total_debt = float(financial_context.get("total_debt", 0) or 0)
-    stress = float(financial_context.get("stress_score", 0) or 0)
     factors = leverage["hardship_factors"]
 
     if leverage["debt_type"] == "student_federal":
@@ -255,52 +294,73 @@ def _normalise_sections(parsed: Dict[str, str], fallback: Dict[str, str]) -> Dic
     return {key: parsed.get(key) or fallback.get(key, "") for key, _ in SECTION_ORDER}
 
 
+# ── Public API ────────────────────────────────────────────────────────────────
+
 def generate_negotiation_script(
     debt: Dict[str, Any],
     leverage: Dict[str, Any],
     financial_context: Dict[str, Any],
 ) -> Dict[str, Any]:
-    """Returns {sections: {...}, source: 'bedrock'|'fallback', raw: str|None}."""
+    """Returns {sections, source, raw} where source is 'groq', 'claude', or 'fallback'."""
+    key = _cache_key(debt, financial_context)
+    cached = _get_cached(key)
+    if cached:
+        return {**cached, "source": cached["source"] + "_cached"}
+
     fallback = _fallback_sections(debt, leverage, financial_context)
-    client = _get_client()
-    if client is None:
-        return {
-            "sections": _normalise_sections({}, fallback),
-            "source": "fallback",
-            "raw": None,
-        }
+    prompt = _build_prompt(debt, leverage, financial_context)
 
-    model_id = os.getenv("BEDROCK_MODEL_ID", "anthropic.claude-sonnet-4-6")
-    body = {
-        "anthropic_version": "bedrock-2023-05-31",
-        "max_tokens": 1500,
-        "temperature": 0.3,
-        "messages": [{"role": "user", "content": _build_prompt(debt, leverage, financial_context)}],
+    # 1. Try Groq
+    groq_client = _get_groq_client()
+    if groq_client:
+        try:
+            model = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+            completion = groq_client.chat.completions.create(
+                model=model,
+                messages=[{"role": "user", "content": prompt}],
+                max_tokens=1500,
+                temperature=0.3,
+            )
+            raw = (completion.choices[0].message.content or "").strip()
+            parsed = _parse_sections(raw)
+            if parsed:
+                result = {
+                    "sections": _normalise_sections(parsed, fallback),
+                    "source": "groq",
+                    "raw": raw,
+                }
+                _set_cached(key, result)
+                return result
+        except Exception as exc:
+            logger.warning("Groq script generation failed; trying Anthropic: %s", exc)
+
+    # 2. Try Anthropic Claude
+    anthropic_client = _get_anthropic_client()
+    if anthropic_client:
+        try:
+            model = os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-6")
+            message = anthropic_client.messages.create(
+                model=model,
+                max_tokens=1500,
+                temperature=0.3,
+                messages=[{"role": "user", "content": prompt}],
+            )
+            raw = (message.content[0].text if message.content else "").strip()
+            parsed = _parse_sections(raw)
+            if parsed:
+                result = {
+                    "sections": _normalise_sections(parsed, fallback),
+                    "source": "claude",
+                    "raw": raw,
+                }
+                _set_cached(key, result)
+                return result
+        except Exception as exc:
+            logger.warning("Anthropic script generation failed; using fallback: %s", exc)
+
+    # 3. Deterministic fallback
+    return {
+        "sections": _normalise_sections({}, fallback),
+        "source": "fallback",
+        "raw": None,
     }
-
-    try:
-        response = client.invoke_model(
-            modelId=model_id,
-            body=json.dumps(body),
-            contentType="application/json",
-            accept="application/json",
-        )
-        payload = json.loads(response["body"].read())
-        blocks = payload.get("content", [])
-        raw = "".join(b.get("text", "") for b in blocks if b.get("type") == "text").strip()
-        parsed = _parse_sections(raw)
-        if not parsed:
-            raise ValueError("Could not parse script sections from Bedrock response")
-        return {
-            "sections": _normalise_sections(parsed, fallback),
-            "source": "bedrock",
-            "raw": raw,
-        }
-    except (ClientError, BotoCoreError, ValueError, KeyError, json.JSONDecodeError) as exc:
-        logger.warning("Bedrock negotiation script failed; using fallback: %s", exc)
-        return {
-            "sections": _normalise_sections({}, fallback),
-            "source": "fallback",
-            "error": str(exc),
-            "raw": None,
-        }
