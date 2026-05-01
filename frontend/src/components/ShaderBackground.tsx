@@ -1,5 +1,5 @@
 "use client";
-import { useRef, useEffect, useState } from "react";
+import { useRef, useEffect } from "react";
 
 // Simplified shader — 3 FBM octaves (was 5), 7 loop iterations (was 11)
 const shaderSource = `#version 300 es
@@ -51,7 +51,7 @@ void main(void) {
   O=vec4(col,1);
 }`;
 
-function DesktopShader() {
+export function ShaderBackground() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rafRef = useRef<number>(0);
 
@@ -61,11 +61,18 @@ function DesktopShader() {
     const gl = canvas.getContext("webgl2");
     if (!gl) return;
 
-    // Lower resolution on desktop too — most users can't tell the difference
-    const dpr = Math.min(window.devicePixelRatio, 1.5) * 0.6;
+    const isMobile = window.innerWidth < 768 || navigator.maxTouchPoints > 0;
+
+    // Mobile: render at ~10% of screen size (nebula looks fine blurry — all smooth gradients)
+    // Desktop: render at 60% of screen size
+    const scale = isMobile ? 0.12 : 0.6;
+
+    // Target FPS: 15 on mobile, 30 on desktop
+    const frameMs = isMobile ? 66 : 33;
+
     const resize = () => {
-      canvas.width = Math.floor(window.innerWidth * dpr);
-      canvas.height = Math.floor(window.innerHeight * dpr);
+      canvas.width = Math.floor(window.innerWidth * scale);
+      canvas.height = Math.floor(window.innerHeight * scale);
       gl.viewport(0, 0, canvas.width, canvas.height);
     };
     resize();
@@ -77,7 +84,10 @@ function DesktopShader() {
       return sh;
     };
 
-    const vs = compile(`#version 300 es\nprecision mediump float;\nin vec4 position;\nvoid main(){gl_Position=position;}`, gl.VERTEX_SHADER);
+    const vs = compile(
+      `#version 300 es\nprecision mediump float;\nin vec4 position;\nvoid main(){gl_Position=position;}`,
+      gl.VERTEX_SHADER
+    );
     const fs = compile(shaderSource, gl.FRAGMENT_SHADER);
     const program = gl.createProgram()!;
     gl.attachShader(program, vs);
@@ -87,18 +97,17 @@ function DesktopShader() {
     const buf = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, buf);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, 1, -1, -1, 1, 1, 1, -1]), gl.STATIC_DRAW);
-    const pos = gl.getAttribLocation(program, "position");
-    gl.enableVertexAttribArray(pos);
-    gl.vertexAttribPointer(pos, 2, gl.FLOAT, false, 0, 0);
+    const posLoc = gl.getAttribLocation(program, "position");
+    gl.enableVertexAttribArray(posLoc);
+    gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
 
     const uRes = gl.getUniformLocation(program, "resolution");
     const uTime = gl.getUniformLocation(program, "time");
 
-    // 30fps cap — skip every other frame
     let last = 0;
     const loop = (now: number) => {
       rafRef.current = requestAnimationFrame(loop);
-      if (now - last < 33) return; // ~30fps
+      if (now - last < frameMs) return;
       last = now;
       gl.useProgram(program);
       gl.uniform2f(uRes, canvas.width, canvas.height);
@@ -115,39 +124,10 @@ function DesktopShader() {
     };
   }, []);
 
-  return <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" />;
-}
-
-// CSS-only background for mobile — no GPU shader cost
-function MobileBackground() {
-  return (
-    <div
-      className="absolute inset-0 animate-gradient-shift"
-      style={{
-        background: `
-          radial-gradient(ellipse 80% 60% at 20% 40%, rgba(59,130,246,0.18) 0%, transparent 60%),
-          radial-gradient(ellipse 70% 50% at 80% 20%, rgba(139,92,246,0.15) 0%, transparent 60%),
-          radial-gradient(ellipse 60% 70% at 60% 90%, rgba(217,70,239,0.10) 0%, transparent 60%),
-          #000000
-        `,
-      }}
-    />
-  );
-}
-
-export function ShaderBackground() {
-  const [isMobile, setIsMobile] = useState(false);
-
-  useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < 768 || navigator.maxTouchPoints > 0);
-    check();
-    window.addEventListener("resize", check);
-    return () => window.removeEventListener("resize", check);
-  }, []);
-
   return (
     <div className="fixed inset-0 -z-10 pointer-events-none">
-      {isMobile ? <MobileBackground /> : <DesktopShader />}
+      {/* Canvas is tiny but CSS stretches it to full screen — smooth for organic noise */}
+      <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" style={{ imageRendering: "auto" }} />
       <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/50 to-black/70" />
     </div>
   );
