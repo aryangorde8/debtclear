@@ -72,7 +72,7 @@ def _get_groq_client():
     api_key = os.getenv("GROQ_API_KEY")
     if not api_key:
         return None
-    _GROQ_CLIENT = _groq_sdk.Groq(api_key=api_key)
+    _GROQ_CLIENT = _groq_sdk.Groq(api_key=api_key, max_retries=0, timeout=20.0)
     return _GROQ_CLIENT
 
 
