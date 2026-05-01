@@ -99,29 +99,14 @@ def _compute_hardship_factors(
 
 # ── AI-powered settlement range ───────────────────────────────────────────────
 
-try:
-    import groq as _groq_sdk
-except ImportError:
-    _groq_sdk = None
+from .groq_pool import call_with_failover
 
 try:
     import anthropic as _anthropic_sdk
 except ImportError:
     _anthropic_sdk = None
 
-_GROQ_CLIENT = None
 _ANTHROPIC_CLIENT = None
-
-
-def _groq():
-    global _GROQ_CLIENT
-    if _GROQ_CLIENT is not None or _groq_sdk is None:
-        return _GROQ_CLIENT
-    key = os.getenv("GROQ_API_KEY")
-    if not key:
-        return None
-    _GROQ_CLIENT = _groq_sdk.Groq(api_key=key, max_retries=0, timeout=10.0)
-    return _GROQ_CLIENT
 
 
 def _anthropic():
@@ -192,21 +177,19 @@ def _ai_calculate_settlement_range(
     """Call AI to get personalized settlement percentages. Returns baseline on failure."""
     prompt = _ai_settlement_prompt(debt, debt_type, baseline, leverage_score, hardship_factors, financial_context)
 
-    raw = None
+    # Try Groq with key-pool failover
+    model = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
 
-    # Try Groq first
-    groq = _groq()
-    if groq:
-        try:
-            resp = groq.chat.completions.create(
-                model=os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile"),
-                messages=[{"role": "user", "content": prompt}],
-                max_tokens=60,
-                temperature=0.2,
-            )
-            raw = (resp.choices[0].message.content or "").strip()
-        except Exception as exc:
-            logger.warning("Groq settlement range failed: %s", exc)
+    def _call_groq(client):
+        resp = client.chat.completions.create(
+            model=model,
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=60,
+            temperature=0.2,
+        )
+        return (resp.choices[0].message.content or "").strip()
+
+    raw = call_with_failover(_call_groq)
 
     # Try Anthropic if Groq failed
     if raw is None:

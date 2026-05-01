@@ -42,26 +42,9 @@ def _set_cached(key: str, value):
     _CACHE[key] = (value, time.time())
 
 
-# ── Groq client ──────────────────────────────────────────────────────────────
+# ── Groq client pool (multi-key with failover) ───────────────────────────────
 
-try:
-    import groq as _groq_sdk
-except ImportError:
-    _groq_sdk = None
-
-_GROQ_CLIENT = None
-
-
-def _get_groq_client():
-    global _GROQ_CLIENT
-    if _GROQ_CLIENT is not None or _groq_sdk is None:
-        return _GROQ_CLIENT
-    api_key = os.getenv("GROQ_API_KEY")
-    if not api_key:
-        return None
-    # Don't retry on rate limits — fall through to fallback fast
-    _GROQ_CLIENT = _groq_sdk.Groq(api_key=api_key, max_retries=0, timeout=15.0)
-    return _GROQ_CLIENT
+from .groq_pool import call_with_failover
 
 
 # ── Anthropic client ──────────────────────────────────────────────────────────
@@ -206,24 +189,26 @@ def analyze_with_claude(debt_data: Dict[str, Any], results: Dict[str, Any]) -> D
 
     prompt = _build_prompt(debt_data, results)
 
-    # 1. Try Groq (free tier, no CC required)
-    groq_client = _get_groq_client()
-    if groq_client:
-        try:
-            model = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
-            completion = groq_client.chat.completions.create(
-                model=model,
-                messages=[{"role": "user", "content": prompt}],
-                max_tokens=800,
-                temperature=0.4,
-            )
-            text = (completion.choices[0].message.content or "").strip()
-            if text:
-                result = {"text": text, "source": "groq"}
-                _set_cached(key, result)
-                return result
-        except Exception as exc:
-            logger.warning("Groq API failed; trying Anthropic: %s", exc)
+    # 1. Try Groq with key-pool failover
+    model = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+
+    def _call_groq(client):
+        completion = client.chat.completions.create(
+            model=model,
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=800,
+            temperature=0.4,
+        )
+        text = (completion.choices[0].message.content or "").strip()
+        if not text:
+            raise ValueError("Empty completion")
+        return text
+
+    text = call_with_failover(_call_groq)
+    if text:
+        result = {"text": text, "source": "groq"}
+        _set_cached(key, result)
+        return result
 
     # 2. Try Anthropic Claude
     anthropic_client = _get_anthropic_client()

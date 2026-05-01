@@ -55,25 +55,9 @@ SECTION_ORDER: List[Tuple[str, str]] = [
 SECTION_TITLES = {key: title for key, title in SECTION_ORDER}
 
 
-# ── Groq client ───────────────────────────────────────────────────────────────
+# ── Groq client pool ──────────────────────────────────────────────────────────
 
-try:
-    import groq as _groq_sdk
-except ImportError:
-    _groq_sdk = None
-
-_GROQ_CLIENT = None
-
-
-def _get_groq_client():
-    global _GROQ_CLIENT
-    if _GROQ_CLIENT is not None or _groq_sdk is None:
-        return _GROQ_CLIENT
-    api_key = os.getenv("GROQ_API_KEY")
-    if not api_key:
-        return None
-    _GROQ_CLIENT = _groq_sdk.Groq(api_key=api_key, max_retries=0, timeout=20.0)
-    return _GROQ_CLIENT
+from .groq_pool import call_with_failover
 
 
 # ── Anthropic client ──────────────────────────────────────────────────────────
@@ -310,29 +294,32 @@ def generate_negotiation_script(
     fallback = _fallback_sections(debt, leverage, financial_context)
     prompt = _build_prompt(debt, leverage, financial_context)
 
-    # 1. Try Groq
-    groq_client = _get_groq_client()
-    if groq_client:
-        try:
-            model = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
-            completion = groq_client.chat.completions.create(
-                model=model,
-                messages=[{"role": "user", "content": prompt}],
-                max_tokens=1500,
-                temperature=0.3,
-            )
-            raw = (completion.choices[0].message.content or "").strip()
-            parsed = _parse_sections(raw)
-            if parsed:
-                result = {
-                    "sections": _normalise_sections(parsed, fallback),
-                    "source": "groq",
-                    "raw": raw,
-                }
-                _set_cached(key, result)
-                return result
-        except Exception as exc:
-            logger.warning("Groq script generation failed; trying Anthropic: %s", exc)
+    # 1. Try Groq with key-pool failover
+    model = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+
+    def _call_groq(client):
+        completion = client.chat.completions.create(
+            model=model,
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=1500,
+            temperature=0.3,
+        )
+        raw = (completion.choices[0].message.content or "").strip()
+        parsed = _parse_sections(raw)
+        if not parsed:
+            raise ValueError("Could not parse script sections")
+        return raw, parsed
+
+    groq_result = call_with_failover(_call_groq)
+    if groq_result:
+        raw, parsed = groq_result
+        result = {
+            "sections": _normalise_sections(parsed, fallback),
+            "source": "groq",
+            "raw": raw,
+        }
+        _set_cached(key, result)
+        return result
 
     # 2. Try Anthropic Claude
     anthropic_client = _get_anthropic_client()
