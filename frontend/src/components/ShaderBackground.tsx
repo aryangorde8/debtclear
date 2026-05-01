@@ -63,12 +63,12 @@ export function ShaderBackground() {
 
     const isMobile = window.innerWidth < 768 || navigator.maxTouchPoints > 0;
 
-    // Mobile: render at ~10% of screen size (nebula looks fine blurry — all smooth gradients)
-    // Desktop: render at 60% of screen size
-    const scale = isMobile ? 0.12 : 0.6;
+    // Mobile: 35% of screen — still 8× cheaper than native, but visible noise detail
+    // Desktop: 60% of screen
+    const scale = isMobile ? 0.35 : 0.6;
 
-    // Target FPS: 15 on mobile, 30 on desktop
-    const frameMs = isMobile ? 66 : 33;
+    // Target FPS: 20 on mobile, 30 on desktop
+    const frameMs = isMobile ? 50 : 33;
 
     const resize = () => {
       canvas.width = Math.floor(window.innerWidth * scale);
