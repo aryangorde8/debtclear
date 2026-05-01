@@ -75,6 +75,25 @@ input[type=number]::-webkit-inner-spin-button,
 input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; }
 input[type=number] { -moz-appearance: textfield; }
 
+/* Mobile gradient animation */
+@keyframes gradient-shift {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.85; }
+}
+.animate-gradient-shift {
+  animation: gradient-shift 8s ease-in-out infinite;
+}
+
+/* Reduce motion for users who prefer it / low-end devices */
+@media (prefers-reduced-motion: reduce) {
+  .animate-gradient-shift,
+  .animate-ping,
+  .animate-pulse,
+  .animate-spin,
+  .animate-fade-in-up,
+  .animate-fade-in-down { animation: none !important; opacity: 1 !important; }
+}
+
 /* Hero entrance animations */
 @keyframes fade-in-down {
   from { opacity: 0; transform: translateY(-20px); }
