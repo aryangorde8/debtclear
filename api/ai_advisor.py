@@ -76,12 +76,62 @@ def _build_prompt(debt_data: Dict[str, Any], results: Dict[str, Any]) -> str:
         f"minimum ${d['min_payment']:,.2f}/mo"
         for d in debt_data["debts"]
     )
+    stress = float(results.get("stress_score", 0) or 0)
+    income = float(debt_data["monthly_income"] or 0)
+    total_debt = float(results.get("total_debt", 0) or 0)
+    annual_income = income * 12
+    dti_ratio = (total_debt / annual_income * 100) if annual_income > 0 else 0
+
+    # Map stress score → explicit severity + required tone
+    if stress < 30:
+        severity_label = "HEALTHY"
+        tone_directive = (
+            "The client's situation is healthy. The numbers are working in their favor. "
+            "OPEN with a confident, encouraging assessment — congratulate them on the "
+            "strong fundamentals (low DTI, manageable balances, etc.). Acknowledge what "
+            "they're already doing right. Frame the strategy as 'optimization' and "
+            "'accelerating progress', NOT crisis management. Do NOT use words like "
+            "'challenging', 'concerning', 'worrying', 'critical', 'serious problem', "
+            "'significant burden'. This person is on track — talk like it."
+        )
+    elif stress < 55:
+        severity_label = "MODERATE"
+        tone_directive = (
+            "The client's situation is moderate. They're managing but it's tight. "
+            "OPEN with a balanced, realistic assessment — acknowledge what's working "
+            "AND what's stretched. Frame the strategy as 'getting ahead' and 'building "
+            "momentum'. Do NOT catastrophize. Avoid words like 'severe', 'crisis', "
+            "'overwhelming'. This person needs a clear plan, not a wake-up call."
+        )
+    elif stress < 75:
+        severity_label = "ELEVATED"
+        tone_directive = (
+            "The client's situation is elevated. The numbers are strained and the "
+            "structural problems are real. OPEN with a direct, sober assessment — "
+            "name the specific pressure points (DTI, interest rates, cash flow). "
+            "Frame the strategy as 'taking back control' and 'stopping the bleeding'. "
+            "Be honest but actionable, not alarming."
+        )
+    else:
+        severity_label = "SEVERE"
+        tone_directive = (
+            "The client's situation is severe. The numbers indicate genuine financial "
+            "distress. OPEN with a direct, urgent assessment — be specific about why "
+            "the current trajectory is unsustainable. Frame the strategy as 'emergency "
+            "stabilization' and 'preventing default'. Be candid; this is not the time "
+            "for false reassurance."
+        )
+
     return (
         "You are a certified financial advisor specialising in consumer debt management. "
-        "You are speaking directly to a client whose full numbers you know.\n\n"
+        "You are speaking directly to a client whose full numbers you know. Your tone "
+        "MUST match the severity tier given below — a healthy client should NOT hear the "
+        "same framing as a distressed client.\n\n"
         "CLIENT SITUATION\n"
         f"- Total debt: ${results['total_debt']:,.2f}\n"
         f"- Monthly income: ${debt_data['monthly_income']:,.2f}\n"
+        f"- Annual income: ${annual_income:,.2f}\n"
+        f"- Debt-to-annual-income ratio: {dti_ratio:.0f}%\n"
         f"- Extra monthly payment available beyond minimums: ${debt_data['extra_payment']:,.2f}\n"
         f"- Number of debts: {len(debt_data['debts'])}\n"
         f"- Weighted average interest rate: {results['weighted_avg_rate']}%\n"
@@ -92,17 +142,23 @@ def _build_prompt(debt_data: Dict[str, Any], results: Dict[str, Any]) -> str:
         f"- Snowball method: debt-free in {results['snowball']['months']} months, "
         f"total interest paid ${results['snowball']['total_interest']:,.2f}\n"
         f"- Interest saved by Avalanche over Snowball: ${results['interest_saved']:,.2f}\n"
-        f"- Months saved by Avalanche: {results['months_saved']}\n"
-        f"- Financial stress score: {results['stress_score']}/100\n\n"
+        f"- Months saved by Avalanche: {results['months_saved']}\n\n"
+        "SEVERITY TIER\n"
+        f"- Financial stress score: {results['stress_score']}/100\n"
+        f"- Severity tier: {severity_label}\n"
+        f"- Required tone: {tone_directive}\n\n"
         "RESPONSE FORMAT — return exactly three paragraphs, no headings, no bullet lists:\n"
-        "1. Direct, specific assessment of their debt situation. Cite exact dollar figures.\n"
+        "1. Tone-matched assessment of their debt situation per the severity tier. Cite "
+        "exact dollar figures and the DTI ratio. Open with framing that fits the tier.\n"
         "2. The strategy you recommend and why, referencing the precise mathematical "
         "difference between Avalanche and Snowball for THIS client.\n"
         "3. One concrete action they can take this month, with an exact dollar amount.\n\n"
-        "Rules: be direct and specific, never generic. Use exact dollar figures. "
-        "Reference real concepts (debt avalanche, compound interest, debt-to-income ratio). "
-        "Do not give disclaimers. Do not suggest consulting another advisor. "
-        "Speak as their trusted advisor who already knows the full picture."
+        "Rules: be direct and specific, never generic. Match the tone to the severity "
+        "tier — do not default to 'concerning' framing if the tier is HEALTHY or MODERATE. "
+        "Use exact dollar figures. Reference real concepts (debt avalanche, compound "
+        "interest, debt-to-income ratio). Do not give disclaimers. Do not suggest "
+        "consulting another advisor. Speak as their trusted advisor who already knows "
+        "the full picture."
     )
 
 
