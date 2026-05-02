@@ -1,11 +1,13 @@
 "use client";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Copy, Check, Loader2, ChevronRight, Sparkles, TrendingDown } from "lucide-react";
+import { X, Copy, Check, Loader2, ChevronRight, Sparkles, TrendingDown, Mic, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { AnimatedNumber } from "@/components/AnimatedNumber";
+import { PhoneRoleplayModal } from "@/components/PhoneRoleplayModal";
+import { SettlementLetterModal } from "@/components/SettlementLetterModal";
 import { Debt, NegotiateResult } from "@/types";
 import { negotiate } from "@/lib/api";
 import { toast } from "sonner";
@@ -29,6 +31,8 @@ export function NegotiateModal({ debt, financialContext, debtCount, onClose }: P
   const [loading, setLoading] = useState(false);
   const [activeSection, setActiveSection] = useState(0);
   const [copied, setCopied] = useState(false);
+  const [roleplayOpen, setRoleplayOpen] = useState(false);
+  const [letterOpen, setLetterOpen] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -150,11 +154,25 @@ export function NegotiateModal({ debt, financialContext, debtCount, onClose }: P
 
                 {/* Script sections */}
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
                     <h3 className="font-semibold text-sm">Phone Script</h3>
-                    <Button size="sm" variant="outline" onClick={copyAll}>
-                      {copied ? <><Check className="h-3.5 w-3.5 text-emerald-400" /> Copied</> : <><Copy className="h-3.5 w-3.5" /> Copy All</>}
-                    </Button>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <button
+                        onClick={() => setRoleplayOpen(true)}
+                        className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-black rounded-md text-xs font-semibold flex items-center gap-1.5 transition-all hover:scale-105"
+                      >
+                        <Mic className="h-3.5 w-3.5" /> Practice Call
+                      </button>
+                      <button
+                        onClick={() => setLetterOpen(true)}
+                        className="px-3 py-1.5 bg-blue-500 hover:bg-blue-400 text-white rounded-md text-xs font-semibold flex items-center gap-1.5 transition-all hover:scale-105"
+                      >
+                        <FileText className="h-3.5 w-3.5" /> Letter
+                      </button>
+                      <Button size="sm" variant="outline" onClick={copyAll}>
+                        {copied ? <><Check className="h-3.5 w-3.5 text-emerald-400" /> Copied</> : <><Copy className="h-3.5 w-3.5" /> Copy All</>}
+                      </Button>
+                    </div>
                   </div>
 
                   {result.script.section_order.map(({ key, title }, idx) => (
@@ -204,6 +222,24 @@ export function NegotiateModal({ debt, financialContext, debtCount, onClose }: P
           </div>
         </motion.div>
       </motion.div>
+      {roleplayOpen && result && (
+        <PhoneRoleplayModal
+          debt={debt}
+          leverage={result.leverage_analysis}
+          onClose={() => setRoleplayOpen(false)}
+        />
+      )}
+      {letterOpen && result && (
+        <SettlementLetterModal
+          debt={debt}
+          leverage={result.leverage_analysis}
+          financialContext={{
+            monthly_income: financialContext.monthly_income,
+            total_debt: financialContext.total_debt,
+          }}
+          onClose={() => setLetterOpen(false)}
+        />
+      )}
     </AnimatePresence>
   );
 }

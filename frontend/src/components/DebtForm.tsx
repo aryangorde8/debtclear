@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Trash2, Loader2, ArrowRight, DollarSign, CreditCard, Wallet, CheckCircle2 } from "lucide-react";
+import { Plus, Trash2, Loader2, ArrowRight, DollarSign, CreditCard, Wallet, CheckCircle2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Debt, AnalyzePayload, AnalyzeResult } from "@/types";
@@ -62,6 +62,15 @@ function LoadingOverlay() {
 
 const EMPTY_DEBT: Debt = { name: "", balance: 0, rate: 0, min_payment: 0 };
 
+const SAMPLE_INCOME = "5800";
+const SAMPLE_EXTRA = "300";
+const SAMPLE_DEBTS: Debt[] = [
+  { name: "Chase Sapphire Card", balance: 8500, rate: 24.99, min_payment: 255 },
+  { name: "Discover Card", balance: 4200, rate: 21.5, min_payment: 130 },
+  { name: "Capital One Quicksilver", balance: 2800, rate: 19.99, min_payment: 90 },
+  { name: "Personal Loan (Upstart)", balance: 6400, rate: 15.5, min_payment: 220 },
+];
+
 interface Props { onResult: (r: AnalyzeResult) => void }
 
 export function DebtForm({ onResult }: Props) {
@@ -72,6 +81,13 @@ export function DebtForm({ onResult }: Props) {
 
   const addDebt = () => setDebts((d) => [...d, { ...EMPTY_DEBT }]);
   const removeDebt = (i: number) => setDebts((d) => d.filter((_, idx) => idx !== i));
+  const loadSample = () => {
+    setIncome(SAMPLE_INCOME);
+    setExtra(SAMPLE_EXTRA);
+    setDebts(SAMPLE_DEBTS.map((d) => ({ ...d })));
+    toast.success("Sample data loaded — click Run Analysis");
+    document.getElementById("form")?.scrollIntoView({ behavior: "smooth" });
+  };
   const updateDebt = (i: number, field: keyof Debt, value: string) =>
     setDebts((d) => d.map((debt, idx) => idx === i ? { ...debt, [field]: field === "name" ? value : parseFloat(value) || 0 } : debt));
 
@@ -126,6 +142,14 @@ export function DebtForm({ onResult }: Props) {
           <p className="text-white/60 text-lg max-w-md mx-auto">
             Exact figures give you exact results. Nothing leaves your browser.
           </p>
+          <button
+            type="button"
+            onClick={loadSample}
+            className="mt-6 inline-flex items-center gap-2 px-5 py-2 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 text-sm text-white/80 hover:text-white transition-all"
+          >
+            <Sparkles className="h-3.5 w-3.5 text-amber-300" />
+            Try with sample data
+          </button>
         </motion.div>
 
         <motion.form

@@ -6,7 +6,7 @@ from rest_framework import status
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.response import Response
 
-from . import ai_advisor, debt_engine, negotiation_engine, script_generator
+from . import ai_advisor, debt_engine, letter_generator, negotiation_engine, roleplay_engine, script_generator
 
 logger = logging.getLogger(__name__)
 
@@ -188,6 +188,141 @@ def negotiate(request):
         },
         status=status.HTTP_200_OK,
     )
+
+
+def _validate_roleplay(payload: dict) -> tuple[dict | None, dict | None]:
+    if not isinstance(payload, dict):
+        return None, {"error": "Request body must be a JSON object."}
+
+    debt = payload.get("debt")
+    if not isinstance(debt, dict):
+        return None, {"error": "debt must be an object."}
+    try:
+        balance = float(debt.get("balance", 0))
+        rate = float(debt.get("rate", 0))
+    except (TypeError, ValueError):
+        return None, {"error": "debt fields must be numeric."}
+    name = str(debt.get("name", "")).strip() or "the creditor"
+    if balance <= 0 or rate < 0:
+        return None, {"error": "Invalid debt values."}
+
+    leverage = payload.get("leverage")
+    if not isinstance(leverage, dict):
+        return None, {"error": "leverage must be an object."}
+    required = ("settlement_low", "settlement_target", "settlement_high", "leverage_label", "debt_type_label")
+    for k in required:
+        if k not in leverage:
+            return None, {"error": f"leverage.{k} is required."}
+
+    history = payload.get("history", [])
+    if not isinstance(history, list):
+        return None, {"error": "history must be a list."}
+    if len(history) > 30:
+        return None, {"error": "Conversation too long."}
+
+    clean_history = []
+    for i, m in enumerate(history):
+        if not isinstance(m, dict):
+            return None, {"error": f"history[{i}] must be an object."}
+        role = str(m.get("role", "")).lower()
+        if role not in ("user", "creditor"):
+            return None, {"error": f"history[{i}].role must be 'user' or 'creditor'."}
+        text = str(m.get("text", "")).strip()
+        if not text:
+            continue
+        clean_history.append({"role": role, "text": text[:500]})
+
+    return (
+        {
+            "debt": {"name": name, "balance": balance, "rate": rate, "min_payment": float(debt.get("min_payment", 0) or 0)},
+            "leverage": leverage,
+            "history": clean_history,
+        },
+        None,
+    )
+
+
+@api_view(["POST"])
+@authentication_classes([])
+@permission_classes([])
+def roleplay(request):
+    clean, error = _validate_roleplay(request.data)
+    if error:
+        return Response(error, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        result = roleplay_engine.generate_creditor_turn(
+            clean["debt"], clean["leverage"], clean["history"]
+        )
+    except Exception:
+        logger.exception("roleplay_engine failed")
+        return Response(
+            {"error": "Could not generate creditor response."},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
+
+    return Response(result, status=status.HTTP_200_OK)
+
+
+def _validate_letter(payload: dict) -> tuple[dict | None, dict | None]:
+    if not isinstance(payload, dict):
+        return None, {"error": "Request body must be a JSON object."}
+    debt = payload.get("debt")
+    if not isinstance(debt, dict):
+        return None, {"error": "debt must be an object."}
+    try:
+        balance = float(debt.get("balance", 0))
+        rate = float(debt.get("rate", 0))
+    except (TypeError, ValueError):
+        return None, {"error": "debt fields must be numeric."}
+    name = str(debt.get("name", "")).strip() or "the creditor"
+    if balance <= 0 or rate < 0:
+        return None, {"error": "Invalid debt values."}
+
+    leverage = payload.get("leverage")
+    if not isinstance(leverage, dict):
+        return None, {"error": "leverage must be an object."}
+    for k in ("settlement_target", "settlement_low", "settlement_high", "debt_type_label"):
+        if k not in leverage:
+            return None, {"error": f"leverage.{k} is required."}
+
+    ctx = payload.get("financial_context") or {}
+    try:
+        monthly_income = float(ctx.get("monthly_income", 0))
+        total_debt = float(ctx.get("total_debt", balance))
+    except (TypeError, ValueError):
+        return None, {"error": "financial_context fields must be numbers."}
+
+    return (
+        {
+            "debt": {"name": name, "balance": balance, "rate": rate, "min_payment": float(debt.get("min_payment", 0) or 0)},
+            "leverage": leverage,
+            "financial_context": {"monthly_income": monthly_income, "total_debt": total_debt},
+        },
+        None,
+    )
+
+
+@api_view(["POST"])
+@authentication_classes([])
+@permission_classes([])
+def settlement_letter(request):
+    clean, error = _validate_letter(request.data)
+    if error:
+        return Response(error, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        result = letter_generator.generate_settlement_letter(
+            clean["debt"], clean["leverage"], clean["financial_context"]
+        )
+    except Exception:
+        logger.exception("letter_generator failed")
+        return Response(
+            {"error": "Could not generate letter."},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
+
+    return Response(result, status=status.HTTP_200_OK)
 
 
 @api_view(["GET"])

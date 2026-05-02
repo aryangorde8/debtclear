@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { TrendingDown, Clock, Sparkles, RefreshCw, HandshakeIcon } from "lucide-react";
+import { TrendingDown, Clock, Sparkles, RefreshCw, HandshakeIcon, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +10,7 @@ import { StressRing } from "@/components/StressRing";
 import { PayoffChart } from "@/components/PayoffChart";
 import { DebtDonut } from "@/components/DebtDonut";
 import { NegotiateModal } from "@/components/NegotiateModal";
+import { ShareCardModal } from "@/components/ShareCardModal";
 import { AnalyzeResult, Debt } from "@/types";
 
 interface Props { result: AnalyzeResult; onReset: () => void }
@@ -26,6 +27,7 @@ const card = {
 
 export function ResultsDashboard({ result, onReset }: Props) {
   const [negotiateDebt, setNegotiateDebt] = useState<Debt | null>(null);
+  const [shareOpen, setShareOpen] = useState(false);
   const isAvalanche = result.recommended_strategy === "avalanche";
 
   const financialContext = {
@@ -51,9 +53,19 @@ export function ResultsDashboard({ result, onReset }: Props) {
               {" "}· {result.debts.length} account{result.debts.length !== 1 ? "s" : ""}
             </p>
           </div>
-          <Button variant="outline" size="sm" onClick={onReset}>
-            <RefreshCw className="h-3.5 w-3.5" /> New Analysis
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShareOpen(true)}
+              className="border-emerald-500/40 hover:border-emerald-500/60 hover:bg-emerald-500/10"
+            >
+              <Share2 className="h-3.5 w-3.5" /> Share my plan
+            </Button>
+            <Button variant="outline" size="sm" onClick={onReset}>
+              <RefreshCw className="h-3.5 w-3.5" /> New Analysis
+            </Button>
+          </div>
         </motion.div>
 
         {/* Top stats */}
@@ -214,6 +226,10 @@ export function ResultsDashboard({ result, onReset }: Props) {
           debtCount={result.debts.length}
           onClose={() => setNegotiateDebt(null)}
         />
+      )}
+
+      {shareOpen && (
+        <ShareCardModal result={result} onClose={() => setShareOpen(false)} />
       )}
     </section>
   );

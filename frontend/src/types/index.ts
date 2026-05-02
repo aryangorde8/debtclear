@@ -75,3 +75,19 @@ export interface NegotiateResult {
   };
   debt: Debt;
 }
+
+export interface RoleplayTurn {
+  role: "user" | "creditor";
+  text: string;
+}
+
+export interface RoleplayResponse {
+  message: string;
+  status: "ongoing" | "settled" | "declined";
+  settlement_amount: number | null;
+}
+
+export interface SettlementLetterResponse {
+  body: string;
+  source: string;
+}
