@@ -13,7 +13,6 @@ import { NegotiateModal } from "@/components/NegotiateModal";
 import { WhatIfSlider } from "@/components/WhatIfSlider";
 import { CostOfWaitingCard } from "@/components/CostOfWaitingCard";
 import { CrisisResourcesPanel } from "@/components/CrisisResourcesPanel";
-import { LiveInterestTicker } from "@/components/LiveInterestTicker";
 import { MinimumOnlyCompare } from "@/components/MinimumOnlyCompare";
 import { MilestoneTimeline } from "@/components/MilestoneTimeline";
 import { AdvisorChat } from "@/components/AdvisorChat";
@@ -66,16 +65,12 @@ export function ResultsDashboard({ result, onReset }: Props) {
           animate={{ opacity: 1, y: 0 }}
           className="flex items-center justify-between flex-wrap gap-4"
         >
-          <div className="space-y-2">
+          <div>
             <h2 className="text-3xl font-bold">Your Debt Analysis</h2>
-            <p className="text-muted-foreground">
+            <p className="text-muted-foreground mt-1">
               Total debt: <span className="text-foreground font-semibold">${result.total_debt.toLocaleString("en-US", { maximumFractionDigits: 0 })}</span>
               {" "}· {result.debts.length} account{result.debts.length !== 1 ? "s" : ""}
             </p>
-            <LiveInterestTicker
-              totalDebt={result.total_debt}
-              weightedAvgRate={result.weighted_avg_rate}
-            />
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             <Button
