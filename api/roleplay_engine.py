@@ -80,12 +80,19 @@ def _system_prompt(debt: Dict[str, Any], leverage: Dict[str, Any]) -> str:
         f"- Never use markdown, bullet points, or lists. Speak conversationally.\n\n"
         f"WHEN TO END THE CALL:\n"
         f"- If the customer makes an offer at or above your acceptable range AND has "
-        f"pushed back at least once: you can accept.\n"
-        f"- If they hang up or say 'goodbye': end politely.\n"
-        f"- If you accept a settlement, end your message with the exact tag: "
-        f'[CALL_STATUS: SETTLED $X] where X is the dollar amount agreed.\n'
+        f"pushed back at least once: you can verbally accept and then ASK them to confirm "
+        f"the terms (lump sum, deadline, etc.). Tag this turn ONGOING — the deal is not "
+        f"final until they say yes.\n"
+        f"- Only tag SETTLED on a turn where the customer has CLEARLY confirmed the "
+        f"specific dollar amount and terms in their previous message (e.g. they said 'yes', "
+        f"'agreed', 'I'll do that', 'deal'). If you are still asking 'would you be able to "
+        f"commit?' or 'do we have a deal?', the call is ONGOING — wait for their answer.\n"
+        f"- If they hang up or say 'goodbye': end politely with [CALL_STATUS: DECLINED] if "
+        f"no settlement was reached, or [CALL_STATUS: SETTLED $X] if it was.\n"
+        f"- If you accept a settlement that the customer has confirmed, end your message "
+        f'with the exact tag: [CALL_STATUS: SETTLED $X] where X is the dollar amount agreed.\n'
         f"- If they walk away with no deal, end with: [CALL_STATUS: DECLINED]\n"
-        f"- Otherwise, end with: [CALL_STATUS: ONGOING]\n"
+        f"- Otherwise (most turns), end with: [CALL_STATUS: ONGOING]\n"
         f"- The status tag MUST be the very last thing in your response."
     )
 

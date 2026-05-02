@@ -266,7 +266,10 @@ export function PhoneRoleplayModal({ debt, leverage, onClose }: Props) {
     }
   }, [status]);
 
-  const callIsLive = status === "active" && !settlementAmount;
+  // Keep the input/mic available as long as the call hasn't been ended or
+  // closed entirely. Even after a "settled" tag, Sarah may still be asking for
+  // confirmation — the user must be able to reply or wrap up naturally.
+  const callIsLive = status === "active" || status === "settled" || status === "declined";
   const canSpeak = callIsLive && !isSpeaking && !isThinking && !isListening;
   const canSend = callIsLive && !isThinking && textInput.trim().length > 0;
 
