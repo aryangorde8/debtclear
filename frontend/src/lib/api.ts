@@ -27,6 +27,21 @@ async function apiFetch<T>(path: string, body: unknown): Promise<T> {
 export const analyze = (payload: AnalyzePayload) =>
   apiFetch<AnalyzeResult>("/api/analyze/", payload);
 
+export interface SimulateResult {
+  stress_score: number;
+  total_debt: number;
+  weighted_avg_rate: number;
+  extra_payment: number;
+  avalanche: { months: number; total_interest: number; payoff_timeline: number[]; payoff_order: string[]; converged: boolean };
+  snowball: { months: number; total_interest: number; payoff_timeline: number[]; payoff_order: string[]; converged: boolean };
+  interest_saved: number;
+  months_saved: number;
+  recommended_strategy: "avalanche" | "snowball";
+}
+
+export const simulate = (payload: AnalyzePayload) =>
+  apiFetch<SimulateResult>("/api/simulate/", payload);
+
 export const negotiate = (
   debt: Debt,
   financial_context: { monthly_income: number; total_debt: number; stress_score: number },

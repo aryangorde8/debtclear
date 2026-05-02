@@ -325,6 +325,40 @@ def settlement_letter(request):
     return Response(result, status=status.HTTP_200_OK)
 
 
+@api_view(["POST"])
+@authentication_classes([])
+@permission_classes([])
+def simulate(request):
+    """Lightweight what-if simulation — no AI, just the numbers."""
+    clean, error = _validate(request.data)
+    if error:
+        return Response(error, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        results = debt_engine.analyze(clean)
+    except Exception:
+        logger.exception("debt_engine.analyze (simulate) failed")
+        return Response(
+            {"error": "Internal calculation error."},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
+
+    return Response(
+        {
+            "stress_score": results["stress_score"],
+            "total_debt": results["total_debt"],
+            "weighted_avg_rate": results["weighted_avg_rate"],
+            "extra_payment": results["extra_payment"],
+            "avalanche": results["avalanche"],
+            "snowball": results["snowball"],
+            "interest_saved": results["interest_saved"],
+            "months_saved": results["months_saved"],
+            "recommended_strategy": results["recommended_strategy"],
+        },
+        status=status.HTTP_200_OK,
+    )
+
+
 @api_view(["GET"])
 @authentication_classes([])
 @permission_classes([])

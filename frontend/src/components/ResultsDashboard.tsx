@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { TrendingDown, Clock, Sparkles, RefreshCw, HandshakeIcon, Share2 } from "lucide-react";
+import { TrendingDown, Clock, Sparkles, RefreshCw, HandshakeIcon, Share2, FileDown, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -11,6 +11,11 @@ import { PayoffChart } from "@/components/PayoffChart";
 import { DebtDonut } from "@/components/DebtDonut";
 import { NegotiateModal } from "@/components/NegotiateModal";
 import { ShareCardModal } from "@/components/ShareCardModal";
+import { WhatIfSlider } from "@/components/WhatIfSlider";
+import { CostOfWaitingCard } from "@/components/CostOfWaitingCard";
+import { CrisisResourcesPanel } from "@/components/CrisisResourcesPanel";
+import { downloadPlanPDF } from "@/lib/planPdf";
+import { toast } from "sonner";
 import { AnalyzeResult, Debt } from "@/types";
 
 interface Props { result: AnalyzeResult; onReset: () => void }
@@ -28,7 +33,20 @@ const card = {
 export function ResultsDashboard({ result, onReset }: Props) {
   const [negotiateDebt, setNegotiateDebt] = useState<Debt | null>(null);
   const [shareOpen, setShareOpen] = useState(false);
+  const [pdfLoading, setPdfLoading] = useState(false);
   const isAvalanche = result.recommended_strategy === "avalanche";
+
+  const handlePdf = async () => {
+    setPdfLoading(true);
+    try {
+      await downloadPlanPDF(result);
+      toast.success("Plan PDF downloaded");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not generate PDF");
+    } finally {
+      setPdfLoading(false);
+    }
+  };
 
   const financialContext = {
     monthly_income: result.monthly_income,
@@ -53,7 +71,17 @@ export function ResultsDashboard({ result, onReset }: Props) {
               {" "}· {result.debts.length} account{result.debts.length !== 1 ? "s" : ""}
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handlePdf}
+              disabled={pdfLoading}
+              className="border-blue-500/40 hover:border-blue-500/60 hover:bg-blue-500/10"
+            >
+              {pdfLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileDown className="h-3.5 w-3.5" />}
+              Download plan
+            </Button>
             <Button
               variant="outline"
               size="sm"
@@ -120,6 +148,18 @@ export function ResultsDashboard({ result, onReset }: Props) {
           </motion.div>
         </motion.div>
 
+        {/* What-if + Cost of waiting */}
+        <motion.div
+          variants={stagger}
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true }}
+          className="grid grid-cols-1 md:grid-cols-2 gap-5"
+        >
+          <motion.div variants={card}><WhatIfSlider result={result} /></motion.div>
+          <motion.div variants={card}><CostOfWaitingCard result={result} /></motion.div>
+        </motion.div>
+
         {/* Charts */}
         <motion.div variants={stagger} initial="hidden" whileInView="show" viewport={{ once: true }} className="grid grid-cols-1 md:grid-cols-2 gap-5">
           <motion.div variants={card}>
@@ -170,6 +210,13 @@ export function ResultsDashboard({ result, onReset }: Props) {
             </CardContent>
           </Card>
         </motion.div>
+
+        {/* Crisis resources — only renders when stress >= 75 */}
+        <CrisisResourcesPanel
+          stressScore={result.stress_score}
+          monthlyIncome={result.monthly_income}
+          totalDebt={result.total_debt}
+        />
 
         {/* Negotiate cards */}
         <motion.div
