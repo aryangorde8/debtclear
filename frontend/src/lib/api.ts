@@ -1,6 +1,8 @@
 import {
   AnalyzePayload,
   AnalyzeResult,
+  ChatResponse,
+  ChatTurn,
   Debt,
   LeverageAnalysis,
   NegotiateResult,
@@ -65,3 +67,9 @@ export const generateLetter = (
     leverage,
     financial_context,
   });
+
+export const askAdvisor = (
+  snapshot: Record<string, unknown>,
+  history: ChatTurn[],
+  question: string
+) => apiFetch<ChatResponse>("/api/chat/", { snapshot, history, question });

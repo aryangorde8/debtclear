@@ -31,6 +31,7 @@ class StrategyResult:
     total_interest: float
     payoff_timeline: List[float]
     payoff_order: List[str]
+    payoff_months: List[int]  # month index each debt in payoff_order was eliminated
     converged: bool
 
     def as_dict(self) -> dict:
@@ -39,6 +40,7 @@ class StrategyResult:
             "total_interest": round(self.total_interest, 2),
             "payoff_timeline": [round(b, 2) for b in self.payoff_timeline],
             "payoff_order": self.payoff_order,
+            "payoff_months": self.payoff_months,
             "converged": self.converged,
         }
 
@@ -75,6 +77,7 @@ def simulate(
     total_interest = 0.0
     timeline: List[float] = [sum(d["balance"] for d in working)]
     payoff_order: List[str] = []
+    payoff_months: List[int] = []
     paid_off: set[str] = set()
 
     while any(d["balance"] > 0.005 for d in working):
@@ -84,6 +87,7 @@ def simulate(
                 total_interest=total_interest,
                 payoff_timeline=timeline,
                 payoff_order=payoff_order,
+                payoff_months=payoff_months,
                 converged=False,
             )
 
@@ -123,6 +127,7 @@ def simulate(
             if d["balance"] <= 0.005 and d["name"] not in paid_off:
                 paid_off.add(d["name"])
                 payoff_order.append(d["name"])
+                payoff_months.append(months)
 
         timeline.append(sum(max(0.0, d["balance"]) for d in working))
 
@@ -131,6 +136,7 @@ def simulate(
         total_interest=total_interest,
         payoff_timeline=timeline,
         payoff_order=payoff_order,
+        payoff_months=payoff_months,
         converged=True,
     )
 
@@ -181,10 +187,19 @@ def analyze(payload: dict) -> dict:
 
     avalanche = simulate(debts, extra_payment, "avalanche")
     snowball = simulate(debts, extra_payment, "snowball")
+    # Minimum-only baseline = what happens if you do nothing extra.
+    # Use avalanche ordering for the baseline (rate-based) since with $0 extra
+    # the priority lever doesn't matter — only minimums get applied — but the
+    # ordering still affects which minimum cascades first.
+    minimum_only = simulate(debts, 0.0, "avalanche")
 
     interest_saved = round(snowball.total_interest - avalanche.total_interest, 2)
     months_saved = snowball.months - avalanche.months
     recommended = "avalanche" if avalanche.total_interest <= snowball.total_interest else "snowball"
+
+    recommended_result = avalanche if recommended == "avalanche" else snowball
+    interest_vs_minimum = round(minimum_only.total_interest - recommended_result.total_interest, 2)
+    months_vs_minimum = minimum_only.months - recommended_result.months
 
     total_debt = sum(float(d["balance"]) for d in debts)
     weighted_rate = (
@@ -201,8 +216,11 @@ def analyze(payload: dict) -> dict:
         "extra_payment": round(extra_payment, 2),
         "avalanche": avalanche.as_dict(),
         "snowball": snowball.as_dict(),
+        "minimum_only": minimum_only.as_dict(),
         "interest_saved": interest_saved,
         "months_saved": months_saved,
+        "interest_vs_minimum": interest_vs_minimum,
+        "months_vs_minimum": months_vs_minimum,
         "recommended_strategy": recommended,
         "debts": [
             {

@@ -14,6 +14,10 @@ import { ShareCardModal } from "@/components/ShareCardModal";
 import { WhatIfSlider } from "@/components/WhatIfSlider";
 import { CostOfWaitingCard } from "@/components/CostOfWaitingCard";
 import { CrisisResourcesPanel } from "@/components/CrisisResourcesPanel";
+import { LiveInterestTicker } from "@/components/LiveInterestTicker";
+import { MinimumOnlyCompare } from "@/components/MinimumOnlyCompare";
+import { MilestoneTimeline } from "@/components/MilestoneTimeline";
+import { AdvisorChat } from "@/components/AdvisorChat";
 import { downloadPlanPDF } from "@/lib/planPdf";
 import { toast } from "sonner";
 import { AnalyzeResult, Debt } from "@/types";
@@ -64,12 +68,16 @@ export function ResultsDashboard({ result, onReset }: Props) {
           animate={{ opacity: 1, y: 0 }}
           className="flex items-center justify-between flex-wrap gap-4"
         >
-          <div>
+          <div className="space-y-2">
             <h2 className="text-3xl font-bold">Your Debt Analysis</h2>
-            <p className="text-muted-foreground mt-1">
+            <p className="text-muted-foreground">
               Total debt: <span className="text-foreground font-semibold">${result.total_debt.toLocaleString("en-US", { maximumFractionDigits: 0 })}</span>
               {" "}· {result.debts.length} account{result.debts.length !== 1 ? "s" : ""}
             </p>
+            <LiveInterestTicker
+              totalDebt={result.total_debt}
+              weightedAvgRate={result.weighted_avg_rate}
+            />
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             <Button
@@ -148,6 +156,16 @@ export function ResultsDashboard({ result, onReset }: Props) {
           </motion.div>
         </motion.div>
 
+        {/* Why your plan matters — minimum-only baseline comparison */}
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+        >
+          <MinimumOnlyCompare result={result} />
+        </motion.div>
+
         {/* What-if + Cost of waiting */}
         <motion.div
           variants={stagger}
@@ -158,6 +176,16 @@ export function ResultsDashboard({ result, onReset }: Props) {
         >
           <motion.div variants={card}><WhatIfSlider result={result} /></motion.div>
           <motion.div variants={card}><CostOfWaitingCard result={result} /></motion.div>
+        </motion.div>
+
+        {/* Milestone timeline */}
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+        >
+          <MilestoneTimeline result={result} />
         </motion.div>
 
         {/* Charts */}
@@ -209,6 +237,16 @@ export function ResultsDashboard({ result, onReset }: Props) {
               </div>
             </CardContent>
           </Card>
+        </motion.div>
+
+        {/* Advisor chat — follow-up Q&A */}
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+        >
+          <AdvisorChat result={result} />
         </motion.div>
 
         {/* Crisis resources — only renders when stress >= 75 */}

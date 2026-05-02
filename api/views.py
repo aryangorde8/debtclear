@@ -6,7 +6,7 @@ from rest_framework import status
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.response import Response
 
-from . import ai_advisor, debt_engine, letter_generator, negotiation_engine, roleplay_engine, script_generator
+from . import ai_advisor, chat_engine, debt_engine, letter_generator, negotiation_engine, roleplay_engine, script_generator
 
 logger = logging.getLogger(__name__)
 
@@ -357,6 +357,63 @@ def simulate(request):
         },
         status=status.HTTP_200_OK,
     )
+
+
+def _validate_chat(payload: dict) -> tuple[dict | None, dict | None]:
+    if not isinstance(payload, dict):
+        return None, {"error": "Request body must be a JSON object."}
+
+    snapshot = payload.get("snapshot")
+    if not isinstance(snapshot, dict):
+        return None, {"error": "snapshot must be an object."}
+
+    question = str(payload.get("question", "")).strip()
+    if not question:
+        return None, {"error": "question is required."}
+    if len(question) > 500:
+        return None, {"error": "question is too long (max 500 chars)."}
+
+    history = payload.get("history", [])
+    if not isinstance(history, list):
+        return None, {"error": "history must be a list."}
+    if len(history) > 30:
+        return None, {"error": "Conversation too long."}
+
+    clean_history = []
+    for i, m in enumerate(history):
+        if not isinstance(m, dict):
+            return None, {"error": f"history[{i}] must be an object."}
+        role = str(m.get("role", "")).lower()
+        if role not in ("user", "assistant"):
+            continue
+        content = str(m.get("content", "")).strip()
+        if not content:
+            continue
+        clean_history.append({"role": role, "content": content[:1000]})
+
+    return ({"snapshot": snapshot, "history": clean_history, "question": question}, None)
+
+
+@api_view(["POST"])
+@authentication_classes([])
+@permission_classes([])
+def chat(request):
+    clean, error = _validate_chat(request.data)
+    if error:
+        return Response(error, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        result = chat_engine.answer_question(
+            clean["snapshot"], clean["history"], clean["question"]
+        )
+    except Exception:
+        logger.exception("chat_engine failed")
+        return Response(
+            {"error": "Could not generate response."},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
+
+    return Response(result, status=status.HTTP_200_OK)
 
 
 @api_view(["GET"])

@@ -16,6 +16,7 @@ export interface StrategyResult {
   total_interest: number;
   payoff_timeline: number[];
   payoff_order: string[];
+  payoff_months: number[];
   converged: boolean;
 }
 
@@ -29,10 +30,23 @@ export interface AnalyzeResult {
   recommended_strategy: "avalanche" | "snowball";
   avalanche: StrategyResult;
   snowball: StrategyResult;
+  minimum_only: StrategyResult;
+  interest_vs_minimum: number;
+  months_vs_minimum: number;
   ai_analysis: string;
   ai_source: string;
   debts: Debt[];
   extra_payment: number;
+}
+
+export interface ChatTurn {
+  role: "user" | "assistant";
+  content: string;
+}
+
+export interface ChatResponse {
+  text: string;
+  source: string;
 }
 
 export interface LeverageAnalysis {
