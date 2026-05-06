@@ -71,13 +71,6 @@ export const AnimatedShaderHero: React.FC<HeroProps> = ({
             </div>
           )}
 
-          {/* Scroll indicator — directly below the buttons, centered */}
-          <div className="flex flex-col items-center gap-3 pt-16 animate-fade-in-up animation-delay-800">
-            <span className="h-10 w-px bg-gradient-to-b from-white/10 to-white/50 animate-pulse" />
-            <span className="text-white/50 text-[10px] uppercase tracking-[0.3em] font-medium">
-              Scroll to begin
-            </span>
-          </div>
         </div>
       </div>
     </section>
