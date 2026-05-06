@@ -2,9 +2,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { TrendingDown, Clock, Sparkles, RefreshCw, HandshakeIcon, FileDown, Loader2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { AnimatedNumber } from "@/components/AnimatedNumber";
 import { StressRing } from "@/components/StressRing";
 import { PayoffChart } from "@/components/PayoffChart";
@@ -24,13 +22,12 @@ interface Props { result: AnalyzeResult; onReset: () => void }
 
 const stagger = {
   hidden: { opacity: 0 },
-  show: { opacity: 1, transition: { staggerChildren: 0.1 } },
+  show: { opacity: 1, transition: { staggerChildren: 0.08 } },
 };
-const card = {
-  hidden: { opacity: 0, y: 24 },
+const fadeUp = {
+  hidden: { opacity: 0, y: 16 },
   show: { opacity: 1, y: 0 },
 };
-
 
 export function ResultsDashboard({ result, onReset }: Props) {
   const [negotiateDebt, setNegotiateDebt] = useState<Debt | null>(null);
@@ -56,45 +53,53 @@ export function ResultsDashboard({ result, onReset }: Props) {
   };
 
   return (
-    <section className="py-16 px-4">
+    <section className="py-16 px-6 md:px-12 border-t border-foreground/20">
       <div className="max-w-5xl mx-auto space-y-10">
 
-        {/* Header */}
+        {/* Header — editorial masthead style */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex items-center justify-between flex-wrap gap-4"
+          className="border-b border-foreground pb-6"
         >
-          <div>
-            <h2 className="text-3xl font-bold">Your Debt Analysis</h2>
-            <p className="text-muted-foreground mt-1">
-              Total debt: <span className="text-foreground font-semibold">${result.total_debt.toLocaleString("en-US", { maximumFractionDigits: 0 })}</span>
-              {" "}· {result.debts.length} account{result.debts.length !== 1 ? "s" : ""}
-            </p>
-          </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handlePdf}
-              disabled={pdfLoading}
-              className="border-blue-500/40 hover:border-blue-500/60 hover:bg-blue-500/10"
-            >
-              {pdfLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileDown className="h-3.5 w-3.5" />}
-              Download plan
-            </Button>
-            <Button variant="outline" size="sm" onClick={onReset}>
-              <RefreshCw className="h-3.5 w-3.5" /> New Analysis
-            </Button>
+          <div className="flex items-end justify-between flex-wrap gap-4">
+            <div>
+              <div className="eyebrow mb-2">Your Analysis · {new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" })}</div>
+              <h2 className="font-display text-foreground" style={{ fontSize: "clamp(1.75rem, 4vw, 2.75rem)", fontWeight: 400 }}>
+                Your Debt{" "}
+                <span className="font-display" style={{ fontStyle: "italic", color: "hsl(var(--gold))" }}>
+                  Analysis.
+                </span>
+              </h2>
+              <p className="text-muted-foreground mt-1 text-sm font-mono">
+                ${result.total_debt.toLocaleString("en-US", { maximumFractionDigits: 0 })} across {result.debts.length} account{result.debts.length !== 1 ? "s" : ""}
+              </p>
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
+                onClick={handlePdf}
+                disabled={pdfLoading}
+                className="flex items-center gap-2 font-mono text-[10px] tracking-[0.15em] uppercase border border-foreground px-3 py-2 hover:bg-foreground hover:text-background transition-all disabled:opacity-50"
+              >
+                {pdfLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileDown className="h-3.5 w-3.5" />}
+                Download plan
+              </button>
+              <button
+                onClick={onReset}
+                className="flex items-center gap-2 font-mono text-[10px] tracking-[0.15em] uppercase border border-muted-foreground/40 px-3 py-2 text-muted-foreground hover:border-foreground hover:text-foreground transition-all"
+              >
+                <RefreshCw className="h-3.5 w-3.5" /> New Analysis
+              </button>
+            </div>
           </div>
         </motion.div>
 
-        {/* Top stats */}
+        {/* Top stats — Stress + Strategy side by side */}
         <motion.div variants={stagger} initial="hidden" animate="show" className="grid grid-cols-1 md:grid-cols-3 gap-5">
 
           {/* Stress Ring */}
-          <motion.div variants={card}>
-            <Card className="bg-black/50 backdrop-blur-xl border-white/10 h-full">
+          <motion.div variants={fadeUp}>
+            <Card className="paper-card h-full">
               <CardContent className="pt-6 flex justify-center">
                 <StressRing score={result.stress_score} />
               </CardContent>
@@ -102,38 +107,42 @@ export function ResultsDashboard({ result, onReset }: Props) {
           </motion.div>
 
           {/* Strategy recommendation */}
-          <motion.div variants={card} className="md:col-span-2">
-            <Card className={`glass h-full border-2 ${isAvalanche ? "border-blue-500/30" : "border-violet-500/30"} glow-blue`}>
-              <CardHeader className="pb-3">
-                <div className="flex items-center gap-2">
-                  <Badge variant={isAvalanche ? "default" : "purple"} className="text-xs">Recommended</Badge>
-                  <CardTitle className="gradient-text">{isAvalanche ? "Avalanche Method" : "Snowball Method"}</CardTitle>
+          <motion.div variants={fadeUp} className="md:col-span-2">
+            <Card className="paper-card h-full">
+              <CardHeader className="pb-3 border-b border-foreground">
+                <div className="flex items-center gap-3">
+                  <span className="font-mono text-[9px] tracking-[0.2em] uppercase border border-foreground px-2 py-0.5 bg-foreground text-background">
+                    Recommended
+                  </span>
+                  <CardTitle className="font-display text-lg font-medium" style={{ fontStyle: "italic" }}>
+                    {isAvalanche ? "Avalanche Method" : "Snowball Method"}
+                  </CardTitle>
                 </div>
               </CardHeader>
-              <CardContent className="space-y-5">
+              <CardContent className="space-y-5 pt-5">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1">
-                    <p className="text-xs text-muted-foreground flex items-center gap-1"><Clock className="h-3 w-3" /> Debt Free In</p>
-                    <p className="text-3xl font-bold text-foreground">
+                    <p className="eyebrow flex items-center gap-1"><Clock className="h-3 w-3" /> Debt Free In</p>
+                    <p className="font-mono font-bold text-3xl text-foreground">
                       <AnimatedNumber value={isAvalanche ? result.avalanche.months : result.snowball.months} suffix=" mo" />
                     </p>
                   </div>
                   <div className="space-y-1">
-                    <p className="text-xs text-muted-foreground flex items-center gap-1"><TrendingDown className="h-3 w-3" /> Interest Saved</p>
-                    <p className="text-3xl font-bold gradient-text-green">
+                    <p className="eyebrow flex items-center gap-1"><TrendingDown className="h-3 w-3" /> Interest Saved</p>
+                    <p className="font-mono font-bold text-3xl" style={{ color: "hsl(var(--gold))" }}>
                       <AnimatedNumber value={result.interest_saved} prefix="$" />
                     </p>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3 pt-1">
-                  <div className="rounded-lg bg-secondary/50 p-3">
-                    <p className="text-xs text-muted-foreground mb-1">Avalanche</p>
-                    <p className="font-semibold text-sm">{result.avalanche.months} mo · ${result.avalanche.total_interest.toLocaleString("en-US", { maximumFractionDigits: 0 })} interest</p>
+                  <div className="border border-foreground/30 p-3 bg-secondary/30">
+                    <p className="eyebrow mb-1">Avalanche</p>
+                    <p className="font-mono font-semibold text-sm">{result.avalanche.months} mo · ${result.avalanche.total_interest.toLocaleString("en-US", { maximumFractionDigits: 0 })} interest</p>
                   </div>
-                  <div className="rounded-lg bg-secondary/50 p-3">
-                    <p className="text-xs text-muted-foreground mb-1">Snowball</p>
-                    <p className="font-semibold text-sm">{result.snowball.months} mo · ${result.snowball.total_interest.toLocaleString("en-US", { maximumFractionDigits: 0 })} interest</p>
+                  <div className="border border-foreground/30 p-3 bg-secondary/30">
+                    <p className="eyebrow mb-1">Snowball</p>
+                    <p className="font-mono font-semibold text-sm">{result.snowball.months} mo · ${result.snowball.total_interest.toLocaleString("en-US", { maximumFractionDigits: 0 })} interest</p>
                   </div>
                 </div>
               </CardContent>
@@ -141,12 +150,12 @@ export function ResultsDashboard({ result, onReset }: Props) {
           </motion.div>
         </motion.div>
 
-        {/* Why your plan matters — minimum-only baseline comparison */}
+        {/* Minimum-only baseline comparison */}
         <motion.div
-          initial={{ opacity: 0, y: 24 }}
+          initial={{ opacity: 0, y: 16 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
+          transition={{ duration: 0.5 }}
         >
           <MinimumOnlyCompare result={result} />
         </motion.div>
@@ -159,61 +168,66 @@ export function ResultsDashboard({ result, onReset }: Props) {
           viewport={{ once: true }}
           className="grid grid-cols-1 md:grid-cols-2 gap-5"
         >
-          <motion.div variants={card}><WhatIfSlider result={result} /></motion.div>
-          <motion.div variants={card}><CostOfWaitingCard result={result} /></motion.div>
+          <motion.div variants={fadeUp}><WhatIfSlider result={result} /></motion.div>
+          <motion.div variants={fadeUp}><CostOfWaitingCard result={result} /></motion.div>
         </motion.div>
 
         {/* Milestone timeline */}
         <motion.div
-          initial={{ opacity: 0, y: 24 }}
+          initial={{ opacity: 0, y: 16 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
+          transition={{ duration: 0.5 }}
         >
           <MilestoneTimeline result={result} />
         </motion.div>
 
         {/* Charts */}
         <motion.div variants={stagger} initial="hidden" whileInView="show" viewport={{ once: true }} className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          <motion.div variants={card}>
-            <Card className="bg-black/50 backdrop-blur-xl border-white/10">
-              <CardHeader><CardTitle className="text-base">Payoff Timeline</CardTitle></CardHeader>
-              <CardContent><PayoffChart result={result} /></CardContent>
+          <motion.div variants={fadeUp}>
+            <Card className="paper-card">
+              <CardHeader className="border-b border-foreground/30 pb-3">
+                <div className="eyebrow mb-0.5">Section VII · Figures</div>
+                <CardTitle className="font-display font-medium text-lg" style={{ fontStyle: "italic" }}>Payoff Timeline</CardTitle>
+              </CardHeader>
+              <CardContent className="pt-4"><PayoffChart result={result} /></CardContent>
             </Card>
           </motion.div>
-          <motion.div variants={card}>
-            <Card className="bg-black/50 backdrop-blur-xl border-white/10">
-              <CardHeader><CardTitle className="text-base">Debt Breakdown</CardTitle></CardHeader>
-              <CardContent><DebtDonut debts={result.debts} /></CardContent>
+          <motion.div variants={fadeUp}>
+            <Card className="paper-card">
+              <CardHeader className="border-b border-foreground/30 pb-3">
+                <div className="eyebrow mb-0.5">Section VIII · Breakdown</div>
+                <CardTitle className="font-display font-medium text-lg" style={{ fontStyle: "italic" }}>Debt Breakdown</CardTitle>
+              </CardHeader>
+              <CardContent className="pt-4"><DebtDonut debts={result.debts} /></CardContent>
             </Card>
           </motion.div>
         </motion.div>
 
         {/* AI Analysis */}
         <motion.div
-          initial={{ opacity: 0, y: 24 }}
+          initial={{ opacity: 0, y: 16 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
+          transition={{ duration: 0.5 }}
         >
-          <Card className="bg-black/50 backdrop-blur-xl border-white/10 border-primary/20">
-            <CardHeader className="pb-3">
+          <Card className="paper-card">
+            <CardHeader className="border-b border-foreground pb-4">
+              <div className="eyebrow mb-1">Section IX · The Advisor</div>
               <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-lg bg-primary/15 flex items-center justify-center">
-                  <Sparkles className="h-3.5 w-3.5 text-primary" />
-                </div>
-                <CardTitle className="text-base">AI Financial Advisor</CardTitle>
+                <Sparkles className="h-3.5 w-3.5" style={{ color: "hsl(var(--gold))" }} />
+                <CardTitle className="font-display text-lg font-medium" style={{ fontStyle: "italic" }}>AI Financial Advisor</CardTitle>
               </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pt-5">
               <div className="space-y-4">
                 {result.ai_analysis.split("\n\n").filter(Boolean).map((para, i) => (
                   <motion.p
                     key={i}
-                    initial={{ opacity: 0, x: -8 }}
+                    initial={{ opacity: 0, x: -6 }}
                     whileInView={{ opacity: 1, x: 0 }}
                     viewport={{ once: true }}
-                    transition={{ delay: i * 0.1, duration: 0.5 }}
+                    transition={{ delay: i * 0.08, duration: 0.4 }}
                     className="text-sm text-muted-foreground leading-relaxed"
                   >
                     {para}
@@ -224,17 +238,17 @@ export function ResultsDashboard({ result, onReset }: Props) {
           </Card>
         </motion.div>
 
-        {/* Advisor chat — follow-up Q&A */}
+        {/* Advisor chat */}
         <motion.div
-          initial={{ opacity: 0, y: 24 }}
+          initial={{ opacity: 0, y: 16 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
+          transition={{ duration: 0.5 }}
         >
           <AdvisorChat result={result} />
         </motion.div>
 
-        {/* Crisis resources — only renders when stress >= 75 */}
+        {/* Crisis resources */}
         <CrisisResourcesPanel
           stressScore={result.stress_score}
           monthlyIncome={result.monthly_income}
@@ -243,13 +257,14 @@ export function ResultsDashboard({ result, onReset }: Props) {
 
         {/* Negotiate cards */}
         <motion.div
-          initial={{ opacity: 0, y: 24 }}
+          initial={{ opacity: 0, y: 16 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
+          transition={{ duration: 0.5 }}
         >
-          <div className="mb-5">
-            <h3 className="text-xl font-bold">Negotiate Your Debts</h3>
+          <div className="mb-6 border-b border-foreground pb-4">
+            <div className="eyebrow mb-2">Section X · Negotiation</div>
+            <h3 className="font-display text-2xl font-medium" style={{ fontStyle: "italic" }}>Negotiate Your Debts</h3>
             <p className="text-muted-foreground text-sm mt-1">Generate a word-for-word phone script to settle each debt for less.</p>
           </div>
 
@@ -257,32 +272,33 @@ export function ResultsDashboard({ result, onReset }: Props) {
             {result.debts.map((debt, i) => (
               <motion.div
                 key={i}
-                initial={{ opacity: 0, scale: 0.95 }}
+                initial={{ opacity: 0, scale: 0.97 }}
                 whileInView={{ opacity: 1, scale: 1 }}
                 viewport={{ once: true }}
-                transition={{ delay: i * 0.08, duration: 0.4 }}
-                whileHover={{ scale: 1.02, y: -2 }}
+                transition={{ delay: i * 0.07, duration: 0.3 }}
+                whileHover={{ y: -2 }}
+                onClick={() => setNegotiateDebt(debt)}
+                className="paper-card cursor-pointer hover:bg-secondary/30 transition-colors"
               >
-                <Card className="bg-black/50 backdrop-blur-xl border-white/10 cursor-pointer border-border hover:border-primary/40 transition-all" onClick={() => setNegotiateDebt(debt)}>
-                  <CardContent className="p-5">
-                    <div className="flex items-start justify-between mb-3">
-                      <div>
-                        <p className="font-semibold text-sm">{debt.name}</p>
-                        <p className="text-xs text-muted-foreground mt-0.5">{debt.rate}% APR</p>
-                      </div>
-                      <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                        <HandshakeIcon className="h-4 w-4 text-primary" />
-                      </div>
+                <div className="p-5">
+                  <div className="flex items-start justify-between mb-3">
+                    <div>
+                      <span className="font-mono text-[10px] tracking-[0.15em] uppercase text-muted-foreground">
+                        {String(i + 1).padStart(2, "0")}
+                      </span>
+                      <p className="font-display text-base font-medium mt-0.5" style={{ fontStyle: "italic" }}>{debt.name}</p>
+                      <p className="font-mono text-xs text-muted-foreground mt-0.5">{debt.rate}% APR</p>
                     </div>
-                    <p className="text-2xl font-bold text-foreground">
-                      ${debt.balance.toLocaleString("en-US", { maximumFractionDigits: 0 })}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-0.5">Min ${debt.min_payment}/mo</p>
-                    <div className="mt-4 flex items-center justify-between">
-                      <span className="text-xs text-primary font-medium">Tap to negotiate →</span>
-                    </div>
-                  </CardContent>
-                </Card>
+                    <HandshakeIcon className="h-5 w-5 text-muted-foreground shrink-0 mt-1" />
+                  </div>
+                  <p className="font-mono font-bold text-2xl" style={{ color: "hsl(var(--gold))" }}>
+                    ${debt.balance.toLocaleString("en-US", { maximumFractionDigits: 0 })}
+                  </p>
+                  <p className="font-mono text-xs text-muted-foreground mt-0.5">Min ${debt.min_payment}/mo</p>
+                  <div className="mt-4 border-t border-foreground/20 pt-3">
+                    <span className="font-mono text-[10px] tracking-[0.15em] uppercase text-foreground">Tap to negotiate →</span>
+                  </div>
+                </div>
               </motion.div>
             ))}
           </div>

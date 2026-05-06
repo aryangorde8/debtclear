@@ -1,9 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Trash2, Loader2, ArrowRight, DollarSign, CreditCard, Wallet, CheckCircle2, Sparkles } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Plus, Trash2, Loader2, ArrowRight, CheckCircle2, Sparkles } from "lucide-react";
 import { Debt, AnalyzePayload, AnalyzeResult } from "@/types";
 import { analyze } from "@/lib/api";
 import { toast } from "sonner";
@@ -17,41 +15,37 @@ const LOADING_STEPS = [
 
 function LoadingOverlay() {
   const [step, setStep] = useState(0);
-
   useEffect(() => {
-    const interval = setInterval(() => {
-      setStep((s) => Math.min(s + 1, LOADING_STEPS.length - 1));
-    }, 900);
+    const interval = setInterval(() => setStep((s) => Math.min(s + 1, LOADING_STEPS.length - 1)), 900);
     return () => clearInterval(interval);
   }, []);
-
   return (
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center"
+      style={{ background: "hsl(var(--background) / 0.92)", backdropFilter: "blur(4px)" }}
     >
-      <div className="flex flex-col items-center gap-6 p-8 max-w-sm w-full mx-4">
-        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500/20 to-violet-500/20 border border-white/10 flex items-center justify-center">
-          <Loader2 className="h-8 w-8 text-blue-400 animate-spin" />
-        </div>
-        <div className="w-full space-y-3">
+      <div className="paper-card p-10 max-w-sm w-full mx-4 space-y-6">
+        <div className="eyebrow">Analyzing your debts</div>
+        <div className="border-t border-foreground mb-4" />
+        <div className="space-y-4">
           {LOADING_STEPS.map((s, i) => (
             <motion.div
               key={s}
               initial={{ opacity: 0, x: -12 }}
-              animate={{ opacity: i <= step ? 1 : 0.25, x: 0 }}
+              animate={{ opacity: i <= step ? 1 : 0.3, x: 0 }}
               transition={{ delay: i * 0.1 }}
               className="flex items-center gap-3"
             >
               {i < step ? (
-                <CheckCircle2 className="h-4 w-4 text-emerald-400 flex-shrink-0" />
+                <CheckCircle2 className="h-4 w-4 text-ink-green flex-shrink-0" />
               ) : i === step ? (
-                <Loader2 className="h-4 w-4 text-blue-400 animate-spin flex-shrink-0" />
+                <Loader2 className="h-4 w-4 animate-spin flex-shrink-0 text-gold" style={{ color: "hsl(var(--gold))" }} />
               ) : (
-                <div className="h-4 w-4 rounded-full border border-white/20 flex-shrink-0" />
+                <div className="h-4 w-4 rounded-full border border-muted-foreground/40 flex-shrink-0" />
               )}
-              <span className={`text-sm ${i <= step ? "text-white" : "text-white/30"}`}>{s}</span>
+              <span className={`text-sm font-mono ${i <= step ? "text-foreground" : "text-muted-foreground"}`}>{s}</span>
             </motion.div>
           ))}
         </div>
@@ -61,7 +55,6 @@ function LoadingOverlay() {
 }
 
 const EMPTY_DEBT: Debt = { name: "", balance: 0, rate: 0, min_payment: 0 };
-
 const SAMPLE_INCOME = "5800";
 const SAMPLE_EXTRA = "300";
 const SAMPLE_DEBTS: Debt[] = [
@@ -109,232 +102,221 @@ export function DebtForm({ onResult }: Props) {
     }
   };
 
+  const totalBalance = debts.reduce((s, d) => s + (d.balance || 0), 0);
+  const totalMin = debts.reduce((s, d) => s + (d.min_payment || 0), 0);
+
   return (
     <>
-    {loading && <LoadingOverlay />}
-    <section id="form" className="relative py-32 px-4 overflow-hidden">
-      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent pointer-events-none" />
+      {loading && <LoadingOverlay />}
+      <section id="form" className="py-20 md:py-28 px-6 md:px-12 border-b border-foreground/20">
+        <div className="max-w-4xl mx-auto">
 
-      <div className="relative max-w-3xl mx-auto">
-        <motion.div
-          initial={{ opacity: 0, y: 32 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
-          className="text-center mb-14"
-        >
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/5 border border-white/10 backdrop-blur-md mb-6">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75" />
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-400" />
-            </span>
-            <span className="text-xs text-white/70">Step 1 of 2</span>
-          </div>
-          <h2 className="text-5xl md:text-6xl font-bold mb-4 leading-[1.05]">
-            <span className="bg-gradient-to-r from-blue-200 via-cyan-300 to-violet-300 bg-clip-text text-transparent">
-              Enter Your
-            </span>
-            <br />
-            <span className="bg-gradient-to-r from-violet-300 via-fuchsia-300 to-blue-300 bg-clip-text text-transparent">
-              Numbers.
-            </span>
-          </h2>
-          <p className="text-white/60 text-lg max-w-md mx-auto">
-            Exact figures give you exact results. Nothing leaves your browser.
-          </p>
-          <button
-            type="button"
-            onClick={loadSample}
-            className="mt-6 inline-flex items-center gap-2 px-5 py-2 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 text-sm text-white/80 hover:text-white transition-all"
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5 }}
+            className="flex items-end justify-between mb-8 flex-wrap gap-4"
           >
-            <Sparkles className="h-3.5 w-3.5 text-amber-300" />
-            Try with sample data
-          </button>
-        </motion.div>
+            <div>
+              <div className="eyebrow mb-3">Section I · The Ledger</div>
+              <h2 className="font-display text-foreground" style={{ fontSize: "clamp(2rem, 4vw, 3rem)", fontWeight: 400 }}>
+                Your debts.
+              </h2>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="font-mono text-[9px] tracking-[0.2em] uppercase border border-muted-foreground/40 px-2 py-1 text-muted-foreground">◉ STAYS LOCAL</span>
+              <button
+                type="button"
+                onClick={loadSample}
+                className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground border-b border-transparent hover:border-muted-foreground transition-all pb-px"
+              >
+                <Sparkles className="h-3 w-3" />
+                Try sample data
+              </button>
+            </div>
+          </motion.div>
 
-        <motion.form
-          initial={{ opacity: 0, y: 32 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6, delay: 0.1 }}
-          onSubmit={handleSubmit}
-          className="space-y-6"
-        >
-          {/* Income card */}
-          <div className="relative group">
-            <div className="absolute -inset-px bg-gradient-to-r from-blue-500/20 via-violet-500/20 to-cyan-500/20 rounded-2xl blur opacity-50 group-hover:opacity-100 transition-opacity" />
-            <div className="relative rounded-2xl bg-black/60 backdrop-blur-xl border border-white/10 p-6">
-              <div className="flex items-center gap-2 mb-5">
-                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500/30 to-violet-500/30 border border-white/10 flex items-center justify-center">
-                  <Wallet className="h-4 w-4 text-blue-300" />
-                </div>
-                <h3 className="font-semibold text-white">Monthly Finances</h3>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-xs uppercase tracking-wider text-white/50">Monthly Income</label>
-                  <div className="relative">
-                    <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/40" />
-                    <Input
+          <motion.form
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5, delay: 0.1 }}
+            onSubmit={handleSubmit}
+            className="paper-card"
+          >
+            {/* Monthly finances header row */}
+            <div className="p-6 md:p-8 border-b border-foreground">
+              <div className="eyebrow mb-4">Monthly Finances</div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div>
+                  <label className="eyebrow block mb-2">Monthly income</label>
+                  <div className="flex items-baseline border-b border-foreground pb-2">
+                    <span className="font-mono text-lg text-muted-foreground mr-1">$</span>
+                    <input
                       type="number"
                       step="any"
                       min="1"
                       placeholder="5,000"
                       value={income}
                       onChange={(e) => setIncome(e.target.value)}
-                      className="pl-10 h-12 bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:border-blue-400/50 focus:bg-white/[0.07]"
                       required
+                      className="flex-1 font-mono text-xl bg-transparent outline-none text-foreground placeholder:text-muted-foreground/40"
                     />
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <label className="text-xs uppercase tracking-wider text-white/50">Extra Monthly Payment</label>
-                  <div className="relative">
-                    <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/40" />
-                    <Input
+                <div>
+                  <label className="eyebrow block mb-2">Extra monthly payment</label>
+                  <div className="flex items-baseline border-b border-foreground pb-2">
+                    <span className="font-mono text-lg text-muted-foreground mr-1">$</span>
+                    <input
                       type="number"
                       step="any"
                       min="0"
                       placeholder="200"
                       value={extra}
                       onChange={(e) => setExtra(e.target.value)}
-                      className="pl-10 h-12 bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:border-violet-400/50 focus:bg-white/[0.07]"
                       required
+                      className="flex-1 font-mono text-xl bg-transparent outline-none text-foreground placeholder:text-muted-foreground/40"
                     />
                   </div>
                 </div>
               </div>
             </div>
-          </div>
 
-          {/* Debts header */}
-          <div className="flex items-center justify-between pt-4">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500/30 to-fuchsia-500/30 border border-white/10 flex items-center justify-center">
-                <CreditCard className="h-4 w-4 text-violet-300" />
-              </div>
-              <h3 className="font-semibold text-white">Your Debts</h3>
-              <span className="text-xs text-white/50 px-2 py-0.5 rounded-full bg-white/5 border border-white/10">{debts.length}</span>
+            {/* Debt table header */}
+            <div className="grid grid-cols-[2rem_1fr_1fr_1fr_1fr_2rem] gap-x-4 px-6 md:px-8 py-3 border-b border-foreground bg-secondary/50">
+              <span className="eyebrow">No.</span>
+              <span className="eyebrow">Account</span>
+              <span className="eyebrow text-right">Balance</span>
+              <span className="eyebrow text-right">APR</span>
+              <span className="eyebrow text-right">Min/mo</span>
+              <span />
             </div>
-            <Button
+
+            {/* Debt rows */}
+            <AnimatePresence mode="popLayout">
+              {debts.map((debt, i) => (
+                <motion.div
+                  key={i}
+                  layout
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.25 }}
+                  className="grid grid-cols-[2rem_1fr_1fr_1fr_1fr_2rem] gap-x-4 px-6 md:px-8 py-4 border-b border-border items-center"
+                >
+                  <span className="font-mono text-xs text-gold font-semibold" style={{ color: "hsl(var(--gold))" }}>
+                    {String(i + 1).padStart(2, "0")}
+                  </span>
+                  <input
+                    placeholder="Account name"
+                    value={debt.name}
+                    onChange={(e) => updateDebt(i, "name", e.target.value)}
+                    className="bg-transparent outline-none text-sm text-foreground placeholder:text-muted-foreground/40 font-display italic"
+                    style={{ fontStyle: "italic" }}
+                  />
+                  <div className="flex items-baseline justify-end gap-0.5">
+                    <span className="font-mono text-xs text-muted-foreground">$</span>
+                    <input
+                      type="number"
+                      step="any"
+                      min="1"
+                      placeholder="0"
+                      value={debt.balance || ""}
+                      onChange={(e) => updateDebt(i, "balance", e.target.value)}
+                      required
+                      className="font-mono text-sm text-right bg-transparent outline-none w-20 text-foreground placeholder:text-muted-foreground/40"
+                      style={{ color: "hsl(var(--gold))" }}
+                    />
+                  </div>
+                  <div className="flex items-baseline justify-end gap-0.5">
+                    <input
+                      type="number"
+                      step="any"
+                      min="0"
+                      max="100"
+                      placeholder="0"
+                      value={debt.rate || ""}
+                      onChange={(e) => updateDebt(i, "rate", e.target.value)}
+                      required
+                      className="font-mono text-sm text-right bg-transparent outline-none w-14"
+                      style={{ color: debt.rate > 20 ? "hsl(var(--red))" : "hsl(var(--foreground))" }}
+                    />
+                    <span className="font-mono text-xs text-muted-foreground">%</span>
+                  </div>
+                  <div className="flex items-baseline justify-end gap-0.5">
+                    <span className="font-mono text-xs text-muted-foreground">$</span>
+                    <input
+                      type="number"
+                      step="any"
+                      min="1"
+                      placeholder="0"
+                      value={debt.min_payment || ""}
+                      onChange={(e) => updateDebt(i, "min_payment", e.target.value)}
+                      required
+                      className="font-mono text-sm text-right bg-transparent outline-none w-16 text-foreground placeholder:text-muted-foreground/40"
+                    />
+                  </div>
+                  {debts.length > 1 ? (
+                    <button
+                      type="button"
+                      onClick={() => removeDebt(i)}
+                      className="text-muted-foreground/40 hover:text-red-600 transition-colors"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  ) : <span />}
+                </motion.div>
+              ))}
+            </AnimatePresence>
+
+            {/* Add debt row */}
+            <button
               type="button"
-              size="sm"
               onClick={addDebt}
               disabled={debts.length >= 20}
-              className="bg-white/5 hover:bg-white/10 border border-white/10 text-white h-9"
+              className="w-full flex items-center justify-center gap-2 py-4 border-b border-border text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/30 transition-all border-dashed disabled:opacity-40"
             >
-              <Plus className="h-3.5 w-3.5" /> Add Debt
-            </Button>
-          </div>
+              <Plus className="h-3.5 w-3.5" /> Add another debt
+            </button>
 
-          {/* Debt cards */}
-          <AnimatePresence mode="popLayout">
-            {debts.map((debt, i) => (
-              <motion.div
-                key={i}
-                layout
-                initial={{ opacity: 0, y: 16, scale: 0.97 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, x: -20, scale: 0.95 }}
-                transition={{ duration: 0.3, ease: "easeOut" }}
-                className="relative group"
-              >
-                <div className="absolute -inset-px bg-gradient-to-r from-violet-500/10 via-blue-500/10 to-cyan-500/10 rounded-2xl blur opacity-0 group-hover:opacity-100 transition-opacity" />
-                <div className="relative rounded-2xl bg-black/60 backdrop-blur-xl border border-white/10 p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <span className="text-xs uppercase tracking-wider text-white/40">Debt #{i + 1}</span>
-                    {debts.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => removeDebt(i)}
-                        className="text-white/40 hover:text-red-400 transition-colors p-1.5 rounded-lg hover:bg-red-500/10"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
-                    )}
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div className="sm:col-span-3 space-y-2">
-                      <label className="text-xs uppercase tracking-wider text-white/50">Name</label>
-                      <Input
-                        placeholder="Chase Sapphire Card"
-                        value={debt.name}
-                        onChange={(e) => updateDebt(i, "name", e.target.value)}
-                        className="h-11 bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:border-blue-400/50"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-xs uppercase tracking-wider text-white/50">Balance ($)</label>
-                      <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40 text-sm">$</span>
-                        <Input
-                          type="number"
-                          step="any"
-                          min="1"
-                          placeholder="8,500"
-                          value={debt.balance || ""}
-                          onChange={(e) => updateDebt(i, "balance", e.target.value)}
-                          className="pl-7 h-11 bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:border-blue-400/50"
-                          required
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-xs uppercase tracking-wider text-white/50">APR (%)</label>
-                      <Input
-                        type="number"
-                        step="any"
-                        min="0"
-                        max="100"
-                        placeholder="22.99"
-                        value={debt.rate || ""}
-                        onChange={(e) => updateDebt(i, "rate", e.target.value)}
-                        className="h-11 bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:border-violet-400/50"
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-xs uppercase tracking-wider text-white/50">Min. Payment ($)</label>
-                      <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40 text-sm">$</span>
-                        <Input
-                          type="number"
-                          step="any"
-                          min="1"
-                          placeholder="200"
-                          value={debt.min_payment || ""}
-                          onChange={(e) => updateDebt(i, "min_payment", e.target.value)}
-                          className="pl-7 h-11 bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:border-violet-400/50"
-                          required
-                        />
-                      </div>
-                    </div>
+            {/* Totals */}
+            <div className="px-6 md:px-8 py-6 border-t border-foreground bg-secondary/30">
+              <div className="flex items-center justify-between flex-wrap gap-6">
+                <div>
+                  <div className="eyebrow mb-1">Total balance</div>
+                  <div className="font-mono font-semibold" style={{ fontSize: "2.5rem", color: "hsl(var(--gold))", lineHeight: 1 }}>
+                    ${totalBalance.toLocaleString("en-US", { maximumFractionDigits: 0 })}
                   </div>
                 </div>
-              </motion.div>
-            ))}
-          </AnimatePresence>
+                <div className="text-right">
+                  <div className="eyebrow mb-1">Total minimums</div>
+                  <div className="font-mono font-semibold" style={{ fontSize: "2.5rem", lineHeight: 1 }}>
+                    ${totalMin.toLocaleString("en-US", { maximumFractionDigits: 0 })}
+                    <span className="text-base text-muted-foreground">/mo</span>
+                  </div>
+                </div>
+              </div>
+            </div>
 
-          {/* Submit button — matches hero primary CTA */}
-          <div className="relative group pt-4 flex justify-center">
-            <div className="absolute -inset-2 bg-gradient-to-r from-blue-400/40 via-violet-400/40 to-fuchsia-400/40 rounded-full blur-2xl opacity-60 group-hover:opacity-100 transition-opacity duration-500" />
-            <button
-              type="submit"
-              disabled={loading}
-              className="relative px-10 py-4 bg-white text-black rounded-full font-semibold text-base flex items-center justify-center gap-2 transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-white/20 disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:scale-100"
-            >
-              <>Run Analysis <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" /></>
-            </button>
-          </div>
+            {/* CTA */}
+            <div className="px-6 md:px-8 py-6">
+              <button
+                type="submit"
+                disabled={loading}
+                className="btn-ink w-full flex items-center justify-center gap-2 text-base py-4"
+              >
+                Run Analysis <ArrowRight className="h-4 w-4" />
+              </button>
+            </div>
+          </motion.form>
 
-          <p className="text-center text-xs text-white/40 pt-2">
+          <p className="text-center text-xs text-muted-foreground mt-4">
             Your data never leaves your browser. No accounts, no tracking.
           </p>
-        </motion.form>
-      </div>
-
-      <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent pointer-events-none" />
-    </section>
+        </div>
+      </section>
     </>
   );
 }
