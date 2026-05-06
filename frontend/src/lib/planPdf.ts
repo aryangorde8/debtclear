@@ -317,7 +317,7 @@ export async function downloadPlanPDF(result: AnalyzeResult): Promise<void> {
       doc.setFont("helvetica", "normal");
       doc.setFontSize(8);
       doc.setTextColor(...GOLD);
-      doc.text("← attack first", M + 462, y);
+      doc.text(">> attack first", M + 452, y);
     }
 
     y += 6;
@@ -348,24 +348,23 @@ export async function downloadPlanPDF(result: AnalyzeResult): Promise<void> {
   ];
 
   steps.forEach((step, i) => {
-    ensureSpace(36);
-    // Number
+    ensureSpace(40);
+    // Number — aligned to first text line
     doc.setFont("times", "bold");
     doc.setFontSize(13);
     doc.setTextColor(...GOLD);
     doc.text(`${i + 1}.`, M, y);
-    // Step text
+    // Step text — indented, same baseline as number
     doc.setFont("times", "normal");
     doc.setFontSize(10.5);
     doc.setTextColor(...INK_SOFT);
-    const lines = doc.splitTextToSize(step, W - M * 2 - 24);
+    const lines = doc.splitTextToSize(step, W - M * 2 - 32);
     lines.forEach((line: string, li: number) => {
+      if (li > 0) y += 15;
       ensureSpace(16);
-      doc.text(line, M + 24, li === 0 ? y : y);
-      y += li === 0 ? 0 : 15;
+      doc.text(line, M + 32, y);
     });
-    if (lines.length > 0) { y += 15; }
-    y += 8;
+    y += 22; // gap below each step
   });
 
   // Footer
