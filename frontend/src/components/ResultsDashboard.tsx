@@ -100,7 +100,7 @@ export function ResultsDashboard({ result, onReset }: Props) {
           {/* Stress Ring */}
           <motion.div variants={fadeUp}>
             <Card className="paper-card h-full">
-              <CardContent className="pt-6 flex justify-center">
+              <CardContent className="pt-5 px-5">
                 <StressRing score={result.stress_score} />
               </CardContent>
             </Card>
