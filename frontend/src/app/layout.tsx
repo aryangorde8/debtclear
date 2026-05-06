@@ -1,24 +1,10 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
-import { Fraunces } from "next/font/google";
-import { JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "sonner";
+import { ShaderBackground } from "@/components/ShaderBackground";
 
-const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
-
-const fraunces = Fraunces({
-  subsets: ["latin"],
-  variable: "--font-fraunces",
-  axes: ["opsz"],
-  display: "swap",
-});
-
-const jetbrainsMono = JetBrains_Mono({
-  subsets: ["latin"],
-  variable: "--font-jetbrains",
-  display: "swap",
-});
+const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "DebtClear — Crush Your Debt Intelligently",
@@ -40,10 +26,11 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
-      <body className={`${inter.variable} ${fraunces.variable} ${jetbrainsMono.variable} ${inter.className} antialiased min-h-screen bg-background text-foreground`}>
+    <html lang="en" className="dark">
+      <body className={`${inter.className} antialiased min-h-screen bg-black text-white`}>
+        <ShaderBackground />
         {children}
-        <Toaster position="top-right" richColors />
+        <Toaster theme="dark" position="top-right" richColors />
       </body>
     </html>
   );

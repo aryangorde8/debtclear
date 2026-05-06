@@ -4,32 +4,26 @@
 
 @layer base {
   :root {
-    /* Editorial Light — paper + ink + gold */
-    --background: 38 33% 91%;      /* #F5F1E8 cream parchment */
-    --foreground: 28 13% 9%;       /* #1A1814 dark ink */
-    --card: 44 58% 95%;            /* #FBF8EF lighter paper */
-    --card-foreground: 28 13% 9%;
-    --popover: 44 58% 95%;
-    --popover-foreground: 28 13% 9%;
-    --primary: 40 55% 39%;         /* #9C7A2E gold */
-    --primary-foreground: 38 33% 91%;
-    --secondary: 38 26% 84%;       /* #EDE7D7 bgAlt */
-    --secondary-foreground: 28 13% 9%;
-    --muted: 38 26% 84%;
-    --muted-foreground: 30 9% 44%; /* #7A7064 */
-    --accent: 8 55% 39%;           /* #9B3A2C red/urgency */
-    --accent-foreground: 38 33% 91%;
-    --destructive: 8 55% 39%;
-    --destructive-foreground: 38 33% 91%;
-    --border: 38 23% 72%;          /* #C8BFA8 rule-soft */
-    --border-ink: 28 13% 9%;       /* #1A1814 hard rule */
-    --input: 44 58% 95%;
-    --ring: 40 55% 39%;
-    --radius: 0rem;                /* square — editorial */
-    --gold: 40 55% 39%;
-    --gold-fill: 38 53% 57%;       /* #C9A455 */
-    --green: 134 26% 33%;          /* #3F6B4A */
-    --red: 8 55% 39%;
+    --background: 222 47% 4%;
+    --foreground: 213 31% 91%;
+    --card: 222 47% 6%;
+    --card-foreground: 213 31% 91%;
+    --popover: 222 47% 6%;
+    --popover-foreground: 213 31% 91%;
+    --primary: 217 91% 60%;
+    --primary-foreground: 222 47% 4%;
+    --secondary: 222 47% 11%;
+    --secondary-foreground: 213 31% 91%;
+    --muted: 222 47% 11%;
+    --muted-foreground: 215 20% 55%;
+    --accent: 258 90% 66%;
+    --accent-foreground: 213 31% 91%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 213 31% 91%;
+    --border: 222 47% 14%;
+    --input: 222 47% 11%;
+    --ring: 217 91% 60%;
+    --radius: 0.75rem;
   }
 }
 
@@ -37,116 +31,61 @@
   * { @apply border-border; }
   body {
     @apply bg-background text-foreground;
-    font-feature-settings: "rlig" 1, "calt" 1, "tnum" 0;
+    font-feature-settings: "rlig" 1, "calt" 1;
   }
-  /* Monospace numbers in financial displays */
-  .font-mono { font-feature-settings: "tnum" 1; }
 }
 
-/* ── Scrollbar ─────────────────────────────────────── */
 ::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: hsl(38 33% 91%); }
-::-webkit-scrollbar-thumb { background: hsl(38 23% 72%); }
-::-webkit-scrollbar-thumb:hover { background: hsl(30 9% 44%); }
+::-webkit-scrollbar-track { background: hsl(222 47% 4%); }
+::-webkit-scrollbar-thumb { background: hsl(222 47% 14%); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: hsl(215 20% 55%); }
 
-/* ── Typography utilities ──────────────────────────── */
-.font-display {
-  font-family: var(--font-fraunces), 'Georgia', serif;
-  font-optical-sizing: auto;
-  letter-spacing: -0.02em;
-}
-.font-display-italic {
-  font-family: var(--font-fraunces), 'Georgia', serif;
-  font-style: italic;
-  font-weight: 400;
-}
-.font-mono-nums {
-  font-family: var(--font-jetbrains), 'Courier New', monospace;
-  font-feature-settings: "tnum" 1;
-}
-.eyebrow {
-  font-family: var(--font-jetbrains), monospace;
-  font-size: 10px;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: hsl(var(--muted-foreground));
+.grid-bg {
+  background-image:
+    linear-gradient(hsl(222 47% 14% / 0.5) 1px, transparent 1px),
+    linear-gradient(90deg, hsl(222 47% 14% / 0.5) 1px, transparent 1px);
+  background-size: 64px 64px;
 }
 
-/* ── Ink rules ─────────────────────────────────────── */
-.rule-ink { border-top: 1px solid hsl(var(--border-ink, 28 13% 9%)); }
-.rule-soft { border-top: 1px solid hsl(var(--border)); }
-
-/* ── Paper card (replaces glass) ──────────────────── */
-.paper-card {
-  background: hsl(var(--card));
-  border: 1px solid hsl(28 13% 9%);
-}
-.paper-card-soft {
-  background: hsl(var(--card));
-  border: 1px solid hsl(var(--border));
-}
-
-/* ── Gold text ─────────────────────────────────────── */
-.text-gold { color: hsl(var(--gold)); }
-.text-gold-fill { color: hsl(var(--gold-fill)); }
-.text-ink-green { color: hsl(var(--green)); }
-.text-ink-red { color: hsl(var(--red)); }
-
-/* ── Gradient text (kept for selected callouts) ────── */
 .gradient-text {
-  background: linear-gradient(135deg, hsl(40 55% 39%), hsl(38 53% 57%));
+  background: linear-gradient(135deg, hsl(217 91% 70%), hsl(258 90% 75%));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
+
 .gradient-text-green {
-  color: hsl(var(--green));
+  background: linear-gradient(135deg, hsl(142 76% 55%), hsl(166 76% 50%));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
-/* ── Legacy glass → paper (keeps old class names working) */
 .glass {
-  background: hsl(var(--card));
-  border: 1px solid hsl(28 13% 9%);
-}
-.glow-blue  { box-shadow: none; }
-.glow-purple { box-shadow: none; }
-.glow-green  { box-shadow: none; }
-
-/* ── Grid background (editorial grid) ──────────────── */
-.grid-bg {
-  background-image:
-    linear-gradient(hsl(38 23% 72% / 0.4) 1px, transparent 1px),
-    linear-gradient(90deg, hsl(38 23% 72% / 0.4) 1px, transparent 1px);
-  background-size: 64px 64px;
+  background: hsl(222 47% 6% / 0.85);
+  backdrop-filter: blur(16px);
+  border: 1px solid hsl(222 47% 14%);
 }
 
-/* ── CTA Button style (square, ink) ────────────────── */
-.btn-ink {
-  background: hsl(var(--foreground));
-  color: hsl(var(--background));
-  border: none;
-  padding: 14px 28px;
-  border-radius: 0;
-  font-weight: 500;
-  font-size: 14px;
-  cursor: pointer;
-  letter-spacing: 0.03em;
-  transition: background .15s;
-}
-.btn-ink:hover { background: hsl(var(--gold)); }
+.glow-blue { box-shadow: 0 0 60px hsl(217 91% 60% / 0.12); }
+.glow-purple { box-shadow: 0 0 60px hsl(258 90% 66% / 0.12); }
+.glow-green { box-shadow: 0 0 60px hsl(142 76% 45% / 0.12); }
 
-/* ── Number inputs ──────────────────────────────────── */
 input[type=number]::-webkit-inner-spin-button,
 input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; }
 input[type=number] { -moz-appearance: textfield; }
 
-/* ── Reduce motion ──────────────────────────────────── */
+/* Reduce motion for users who prefer it / low-end devices */
 @media (prefers-reduced-motion: reduce) {
-  .animate-ping, .animate-pulse, .animate-spin,
-  .animate-fade-in-up, .animate-fade-in-down { animation: none !important; opacity: 1 !important; }
+  .animate-gradient-shift,
+  .animate-ping,
+  .animate-pulse,
+  .animate-spin,
+  .animate-fade-in-up,
+  .animate-fade-in-down { animation: none !important; opacity: 1 !important; }
 }
 
-/* ── Hero entrance animations ───────────────────────── */
+/* Hero entrance animations */
 @keyframes fade-in-down {
   from { opacity: 0; transform: translateY(-20px); }
   to { opacity: 1; transform: translateY(0); }
@@ -161,6 +100,3 @@ input[type=number] { -moz-appearance: textfield; }
 .animation-delay-400 { animation-delay: 0.4s; }
 .animation-delay-600 { animation-delay: 0.6s; }
 .animation-delay-800 { animation-delay: 0.8s; }
-
-/* ── Sonner toast overrides ─────────────────────────── */
-[data-sonner-toaster] { --normal-bg: hsl(44 58% 95%); --normal-border: hsl(28 13% 9%); --normal-text: hsl(28 13% 9%); }

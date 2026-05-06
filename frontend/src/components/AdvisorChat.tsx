@@ -26,6 +26,7 @@ export function AdvisorChat({ result }: Props) {
   const [loading, setLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  // Snapshot we send with every turn — same structure regardless of state.
   const snapshot = {
     monthly_income: result.monthly_income,
     extra_payment: result.extra_payment,
@@ -60,6 +61,7 @@ export function AdvisorChat({ result }: Props) {
       setHistory((cur) => [...cur, { role: "assistant", content: r.text }]);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Couldn't reach advisor");
+      // Roll back the user turn so the user can retry without duplicating.
       setHistory((cur) => cur.slice(0, -1));
       setInput(question);
     } finally {
@@ -73,28 +75,27 @@ export function AdvisorChat({ result }: Props) {
   };
 
   return (
-    <Card className="paper-card overflow-hidden">
-      <CardHeader className="pb-3 border-b border-foreground">
+    <Card className="bg-black/50 backdrop-blur-xl border-white/10 border-primary/20 overflow-hidden">
+      <CardHeader className="pb-3">
         <div className="flex items-center gap-2">
-          <div className="eyebrow">Section X · Ask the Advisor</div>
-          <div className="flex items-center gap-1.5 ml-auto">
-            <span className="w-1.5 h-1.5 rounded-full bg-green-600 animate-pulse" />
-            <span className="font-mono text-[9px] tracking-[0.2em] uppercase text-muted-foreground">Live</span>
+          <div className="w-7 h-7 rounded-lg bg-primary/15 flex items-center justify-center">
+            <MessageCircle className="h-3.5 w-3.5 text-primary" />
           </div>
-        </div>
-        <div className="flex items-center gap-2 mt-1">
-          <MessageCircle className="h-3.5 w-3.5" style={{ color: "hsl(var(--gold))" }} />
-          <CardTitle className="font-display text-lg font-medium" style={{ fontStyle: "italic" }}>Ask Your Advisor</CardTitle>
+          <CardTitle className="text-base">Ask Your Advisor</CardTitle>
+          <span className="ml-auto text-[10px] uppercase tracking-wider text-emerald-300/70 flex items-center gap-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            Live
+          </span>
         </div>
       </CardHeader>
-      <CardContent className="space-y-4 pt-4">
+      <CardContent className="space-y-4">
         {history.length === 0 && !loading && (
-          <div className="border border-border p-4 bg-secondary/30">
+          <div className="rounded-xl bg-primary/5 border border-primary/15 p-4">
             <div className="flex items-start gap-2 mb-3">
-              <Sparkles className="h-3.5 w-3.5 mt-0.5 shrink-0" style={{ color: "hsl(var(--gold))" }} />
+              <Sparkles className="h-3.5 w-3.5 text-primary mt-0.5 shrink-0" />
               <p className="text-xs text-muted-foreground leading-relaxed">
-                I have your full financial picture — every debt, your income, your stress score, your plan.
-                Ask anything and I&apos;ll answer with <span className="text-foreground font-medium">your actual numbers</span>.
+                I have your full financial picture in front of me — every debt, your income, your stress score, your plan.
+                Ask me anything follow-up and I&apos;ll answer with <span className="text-foreground font-medium">your actual numbers</span>.
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -102,7 +103,7 @@ export function AdvisorChat({ result }: Props) {
                 <button
                   key={s}
                   onClick={() => send(s)}
-                  className="text-xs px-3 py-1.5 border border-border hover:border-foreground hover:bg-secondary/50 text-muted-foreground hover:text-foreground transition-all font-mono"
+                  className="text-xs px-3 py-1.5 rounded-full bg-white/5 border border-white/10 hover:border-primary/40 hover:bg-primary/10 text-muted-foreground hover:text-foreground transition-all"
                 >
                   {s}
                 </button>
@@ -125,14 +126,14 @@ export function AdvisorChat({ result }: Props) {
                   className={`flex ${turn.role === "user" ? "justify-end" : "justify-start"}`}
                 >
                   <div
-                    className={`max-w-[85%] px-4 py-3 text-sm leading-relaxed border ${
+                    className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
                       turn.role === "user"
-                        ? "bg-foreground text-background border-foreground"
-                        : "bg-card border-border text-muted-foreground"
+                        ? "bg-primary/20 border border-primary/30 text-foreground rounded-br-sm"
+                        : "bg-white/5 border border-white/10 text-muted-foreground rounded-bl-sm"
                     }`}
                   >
                     {turn.role === "assistant" && (
-                      <div className="flex items-center gap-1.5 mb-1.5 font-mono text-[9px] tracking-[0.2em] uppercase" style={{ color: "hsl(var(--gold))" }}>
+                      <div className="flex items-center gap-1.5 mb-1 text-[10px] uppercase tracking-wider text-primary/80 font-semibold">
                         <Sparkles className="h-2.5 w-2.5" />
                         Advisor
                       </div>
@@ -149,16 +150,16 @@ export function AdvisorChat({ result }: Props) {
                 animate={{ opacity: 1 }}
                 className="flex justify-start"
               >
-                <div className="border border-border bg-card px-4 py-3 flex items-center gap-2">
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" style={{ color: "hsl(var(--gold))" }} />
-                  <span className="font-mono text-xs text-muted-foreground">Thinking…</span>
+                <div className="bg-white/5 border border-white/10 rounded-2xl rounded-bl-sm px-4 py-3 flex items-center gap-2">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
+                  <span className="text-xs text-muted-foreground">Thinking…</span>
                 </div>
               </motion.div>
             )}
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="flex items-center gap-2 border-t border-border pt-4">
+        <form onSubmit={handleSubmit} className="flex items-center gap-2">
           <input
             type="text"
             value={input}
@@ -166,12 +167,12 @@ export function AdvisorChat({ result }: Props) {
             placeholder="Ask anything about your plan…"
             disabled={loading}
             maxLength={500}
-            className="flex-1 px-4 py-2.5 border border-border bg-card text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:border-foreground transition-all disabled:opacity-50"
+            className="flex-1 px-4 py-2.5 rounded-full bg-white/5 border border-white/10 text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:border-primary/50 focus:bg-white/10 transition-all disabled:opacity-50"
           />
           <button
             type="submit"
             disabled={loading || !input.trim()}
-            className="w-10 h-10 bg-foreground hover:bg-foreground/80 text-background flex items-center justify-center transition-all disabled:opacity-30 disabled:cursor-not-allowed shrink-0"
+            className="w-10 h-10 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground flex items-center justify-center transition-all disabled:opacity-30 disabled:cursor-not-allowed shrink-0"
             aria-label="Send"
           >
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}

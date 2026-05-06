@@ -110,8 +110,7 @@ export function SettlementLetterModal({ debt, leverage, financialContext, onClos
     <AnimatePresence>
       <motion.div
         key="overlay"
-        className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4"
-        style={{ background: "hsl(var(--background) / 0.88)", backdropFilter: "blur(4px)" }}
+        className="fixed inset-0 z-[60] bg-black/80 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
@@ -119,8 +118,7 @@ export function SettlementLetterModal({ debt, leverage, financialContext, onClos
       >
         <motion.div
           key="modal"
-          className="relative w-full sm:max-w-3xl max-h-[95vh] sm:max-h-[90vh] paper-card overflow-hidden flex flex-col"
-          style={{ borderRadius: 0 }}
+          className="relative w-full sm:max-w-3xl max-h-[95vh] sm:max-h-[90vh] bg-card border border-border rounded-t-2xl sm:rounded-2xl overflow-hidden flex flex-col"
           initial={{ opacity: 0, y: 60 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 60 }}
@@ -128,15 +126,14 @@ export function SettlementLetterModal({ debt, leverage, financialContext, onClos
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
-          <div className="flex items-center justify-between p-5 border-b border-foreground">
+          <div className="flex items-center justify-between p-5 border-b border-border">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 border border-foreground flex items-center justify-center shrink-0">
-                <FileText className="h-5 w-5 text-foreground" />
+              <div className="w-10 h-10 rounded-xl bg-blue-500/15 border border-blue-400/30 flex items-center justify-center">
+                <FileText className="h-5 w-5 text-blue-300" />
               </div>
               <div>
-                <div className="eyebrow mb-0.5">Settlement Letter</div>
-                <h2 className="font-display font-medium text-base" style={{ fontStyle: "italic" }}>{debt.name}</h2>
-                <p className="font-mono text-xs text-muted-foreground">${debt.balance.toLocaleString()}</p>
+                <h2 className="font-bold text-base">Settlement Letter</h2>
+                <p className="text-xs text-muted-foreground">{debt.name} · ${debt.balance.toLocaleString()}</p>
               </div>
             </div>
             <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors p-1">
@@ -148,10 +145,13 @@ export function SettlementLetterModal({ debt, leverage, financialContext, onClos
           <div className="overflow-y-auto flex-1 p-5">
             {loading && (
               <div className="flex flex-col items-center justify-center py-16 gap-4">
-                <Loader2 className="h-10 w-10 animate-spin" style={{ color: "hsl(var(--gold))" }} />
+                <div className="relative">
+                  <div className="absolute inset-0 rounded-full bg-blue-500/20 blur-xl animate-pulse" />
+                  <Loader2 className="h-10 w-10 text-blue-400 animate-spin relative" />
+                </div>
                 <div className="text-center">
-                  <p className="font-display text-base font-medium" style={{ fontStyle: "italic" }}>Drafting your letter…</p>
-                  <p className="font-mono text-xs text-muted-foreground mt-1">Formal certified-mail format</p>
+                  <p className="text-sm font-medium text-white">AI is drafting your letter…</p>
+                  <p className="text-xs text-muted-foreground mt-1">Formal certified-mail format</p>
                 </div>
               </div>
             )}
@@ -162,15 +162,13 @@ export function SettlementLetterModal({ debt, leverage, financialContext, onClos
                 animate={{ opacity: 1, y: 0 }}
                 className="space-y-4"
               >
-                <div className="flex items-start gap-2 border border-foreground/30 p-3 bg-secondary/30">
-                  <Sparkles className="h-3.5 w-3.5 mt-0.5 shrink-0" style={{ color: "hsl(var(--gold))" }} />
-                  <p className="font-mono text-xs text-muted-foreground leading-relaxed">
-                    Draft ready. Review, fill in your personal details, and mail by certified mail with return receipt.
-                  </p>
+                <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-emerald-500/10 border border-emerald-400/20 text-xs text-emerald-300">
+                  <Sparkles className="h-3.5 w-3.5" />
+                  Draft ready. Review, fill in your personal details, and mail by certified mail with return receipt.
                 </div>
 
-                <div className="border border-foreground/20 bg-[#FDFAF4] text-zinc-900 p-8 font-serif text-sm leading-relaxed whitespace-pre-line">
-                  <div className="text-zinc-600 mb-6">{formatLetterDate()}</div>
+                <div className="rounded-xl bg-white text-zinc-900 p-8 font-serif text-sm leading-relaxed whitespace-pre-line shadow-2xl">
+                  <div className="text-zinc-700 mb-6">{formatLetterDate()}</div>
                   <div className="text-zinc-800 mb-6">
                     {debt.name}<br />
                     Collections Department<br />
@@ -184,20 +182,20 @@ export function SettlementLetterModal({ debt, leverage, financialContext, onClos
 
           {/* Action bar */}
           {body && !loading && (
-            <div className="border-t border-foreground/20 p-4 flex items-center justify-between gap-3 bg-secondary/30">
-              <p className="font-mono text-xs text-muted-foreground hidden sm:block">
-                Mail certified · Keep a copy · Wait 30 days
+            <div className="border-t border-border p-4 flex items-center justify-between gap-3 bg-black/40">
+              <p className="text-xs text-muted-foreground hidden sm:block">
+                Mail certified · Keep a copy · Wait 30 days for response
               </p>
               <div className="flex items-center gap-2 ml-auto">
                 <button
                   onClick={copyAll}
-                  className="flex items-center gap-1.5 px-3 py-2 border border-foreground/40 hover:border-foreground text-muted-foreground hover:text-foreground font-mono text-[10px] tracking-[0.12em] uppercase transition-all"
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 text-xs font-medium text-white transition-colors"
                 >
-                  {copied ? <><Check className="h-3.5 w-3.5" style={{ color: "hsl(var(--gold))" }} /> Copied</> : <><Copy className="h-3.5 w-3.5" /> Copy</>}
+                  {copied ? <><Check className="h-3.5 w-3.5 text-emerald-400" /> Copied</> : <><Copy className="h-3.5 w-3.5" /> Copy</>}
                 </button>
                 <button
                   onClick={downloadPDF}
-                  className="flex items-center gap-1.5 px-4 py-2 bg-foreground hover:bg-foreground/80 text-background font-mono text-[10px] tracking-[0.12em] uppercase transition-all"
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-blue-500 hover:bg-blue-400 text-xs font-semibold text-white transition-colors"
                 >
                   <Download className="h-3.5 w-3.5" /> Download PDF
                 </button>
