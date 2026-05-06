@@ -285,7 +285,8 @@ export function PhoneRoleplayModal({ debt, leverage, onClose }: Props) {
     <AnimatePresence>
       <motion.div
         key="overlay"
-        className="fixed inset-0 z-[60] bg-black/80 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4"
+        className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4"
+        style={{ background: "hsl(var(--background) / 0.88)", backdropFilter: "blur(4px)" }}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
@@ -293,7 +294,8 @@ export function PhoneRoleplayModal({ debt, leverage, onClose }: Props) {
       >
         <motion.div
           key="modal"
-          className="relative w-full sm:max-w-2xl max-h-[95vh] sm:max-h-[90vh] bg-gradient-to-b from-zinc-950 to-zinc-900 border border-white/10 rounded-t-2xl sm:rounded-2xl overflow-hidden flex flex-col"
+          className="relative w-full sm:max-w-2xl max-h-[95vh] sm:max-h-[90vh] paper-card overflow-hidden flex flex-col"
+          style={{ borderRadius: 0 }}
           initial={{ opacity: 0, y: 60 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 60 }}
@@ -301,71 +303,68 @@ export function PhoneRoleplayModal({ debt, leverage, onClose }: Props) {
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
-          <div className="flex items-center justify-between p-5 border-b border-white/10">
+          <div className="flex items-center justify-between p-5 border-b border-foreground">
             <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-full bg-gradient-to-br from-emerald-400 to-blue-500 flex items-center justify-center text-white font-bold text-base shrink-0">
-                S
+              <div className="w-11 h-11 border border-foreground flex items-center justify-center shrink-0">
+                <span className="font-display font-medium text-base" style={{ fontStyle: "italic" }}>S</span>
               </div>
               <div>
-                <h2 className="font-bold text-base text-white">Sarah Mitchell</h2>
-                <p className="text-xs text-zinc-400">Collections · {debt.name}</p>
+                <h2 className="font-display font-medium text-base" style={{ fontStyle: "italic" }}>Sarah Mitchell</h2>
+                <p className="font-mono text-xs text-muted-foreground">Collections · {debt.name}</p>
               </div>
             </div>
-            <button
-              onClick={onClose}
-              className="text-zinc-400 hover:text-white transition-colors p-1"
-            >
+            <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors p-1">
               <X className="h-5 w-5" />
             </button>
           </div>
 
           {/* Status bar */}
-          <div className="px-5 py-2 bg-black/40 border-b border-white/5 flex items-center justify-between text-xs">
-            <div className="flex items-center gap-2">
-              {status === "idle" && <span className="text-zinc-500">Ready to call</span>}
+          <div className="px-5 py-2 bg-secondary/40 border-b border-foreground/20 flex items-center justify-between">
+            <div className="flex items-center gap-2 font-mono text-[10px] tracking-[0.15em] uppercase">
+              {status === "idle" && <span className="text-muted-foreground">Ready to call</span>}
               {status === "ringing" && (
                 <>
-                  <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
-                  <span className="text-amber-400">Connecting…</span>
+                  <span className="w-1.5 h-1.5 bg-amber-600 animate-pulse" />
+                  <span className="text-amber-700">Connecting…</span>
                 </>
               )}
               {status === "active" && (
                 <>
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                  <span className="text-emerald-400">Live call</span>
+                  <span className="w-1.5 h-1.5 bg-green-700 animate-pulse" />
+                  <span className="text-green-800">Live call</span>
                 </>
               )}
               {status === "settled" && (
                 <>
-                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
-                  <span className="text-emerald-400">Settled · ${settlementAmount?.toLocaleString()}</span>
+                  <CheckCircle2 className="h-3 w-3 text-green-800" />
+                  <span className="text-green-800">Settled · ${settlementAmount?.toLocaleString()}</span>
                 </>
               )}
               {status === "declined" && (
                 <>
-                  <XCircle className="h-3.5 w-3.5 text-red-400" />
-                  <span className="text-red-400">No deal</span>
+                  <XCircle className="h-3 w-3 text-red-700" />
+                  <span className="text-red-700">No deal</span>
                 </>
               )}
-              {status === "ended" && <span className="text-zinc-500">Call ended</span>}
+              {status === "ended" && <span className="text-muted-foreground">Call ended</span>}
             </div>
-            <div className="flex items-center gap-2 text-zinc-500">
+            <div className="flex items-center gap-2 font-mono text-[10px] tracking-[0.15em] uppercase text-muted-foreground">
               {isSpeaking && (
                 <>
-                  <Volume2 className="h-3.5 w-3.5 animate-pulse text-blue-400" />
-                  <span className="text-blue-400">Sarah speaking</span>
+                  <Volume2 className="h-3 w-3 animate-pulse" style={{ color: "hsl(var(--gold))" }} />
+                  <span style={{ color: "hsl(var(--gold))" }}>Sarah speaking</span>
                 </>
               )}
               {isThinking && !isSpeaking && (
                 <>
-                  <Loader2 className="h-3.5 w-3.5 animate-spin text-zinc-400" />
+                  <Loader2 className="h-3 w-3 animate-spin" />
                   <span>Thinking…</span>
                 </>
               )}
               {isListening && (
                 <>
-                  <Mic className="h-3.5 w-3.5 animate-pulse text-emerald-400" />
-                  <span className="text-emerald-400">Listening</span>
+                  <Mic className="h-3 w-3 animate-pulse text-red-700" />
+                  <span className="text-red-700">Listening</span>
                 </>
               )}
             </div>
@@ -374,37 +373,34 @@ export function PhoneRoleplayModal({ debt, leverage, onClose }: Props) {
           {/* Conversation */}
           <div className="overflow-y-auto flex-1 p-5 space-y-3">
             {supportError && (
-              <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 text-sm text-red-300">
+              <div className="border border-red-700/40 bg-red-50/40 p-4 text-sm text-red-800 font-mono">
                 {supportError}
               </div>
             )}
 
             {status === "ringing" && (
               <div className="flex flex-col items-center justify-center py-12 gap-4">
-                <div className="w-16 h-16 rounded-full bg-amber-400/10 border border-amber-400/30 flex items-center justify-center">
-                  <Loader2 className="h-7 w-7 animate-spin text-amber-400" />
+                <div className="w-16 h-16 border border-foreground/30 flex items-center justify-center">
+                  <Loader2 className="h-7 w-7 animate-spin" style={{ color: "hsl(var(--gold))" }} />
                 </div>
-                <p className="text-sm text-zinc-400">Connecting to Sarah…</p>
+                <p className="font-mono text-xs text-muted-foreground tracking-[0.12em] uppercase">Connecting to Sarah…</p>
               </div>
             )}
 
             {status === "idle" && !supportError && (
-              <div className="flex flex-col items-center justify-center py-8 text-center gap-4">
-                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-emerald-500/20 to-blue-500/20 border border-white/10 flex items-center justify-center">
-                  <Mic className="h-9 w-9 text-emerald-400" />
+              <div className="flex flex-col items-center justify-center py-8 text-center gap-5">
+                <div className="w-20 h-20 border border-foreground/30 flex items-center justify-center">
+                  <Mic className="h-9 w-9 text-muted-foreground" />
                 </div>
                 <div className="max-w-md">
-                  <h3 className="text-xl font-bold text-white mb-2">Practice your call</h3>
-                  <p className="text-sm text-zinc-400 leading-relaxed">
+                  <h3 className="font-display text-xl font-medium mb-2" style={{ fontStyle: "italic" }}>Practice your call</h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
                     You&apos;ll roleplay the negotiation with Sarah, an AI collections agent.
                     Speak naturally — she&apos;ll push back, counter, and only settle if you make
                     a strong case. Use your script as a guide.
                   </p>
                 </div>
-                <button
-                  onClick={startCall}
-                  className="mt-2 px-8 py-3 bg-emerald-500 hover:bg-emerald-400 text-black rounded-full font-semibold text-sm flex items-center gap-2 transition-all hover:scale-105"
-                >
+                <button onClick={startCall} className="btn-ink flex items-center gap-2 text-sm">
                   <Mic className="h-4 w-4" /> Start the call
                 </button>
               </div>
@@ -418,14 +414,14 @@ export function PhoneRoleplayModal({ debt, leverage, onClose }: Props) {
                 className={`flex ${turn.role === "user" ? "justify-end" : "justify-start"}`}
               >
                 <div
-                  className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
+                  className={`max-w-[85%] px-4 py-2.5 text-sm leading-relaxed border ${
                     turn.role === "user"
-                      ? "bg-blue-500/20 border border-blue-400/30 text-blue-50 rounded-br-sm"
-                      : "bg-white/5 border border-white/10 text-zinc-100 rounded-bl-sm"
+                      ? "bg-foreground text-background border-foreground"
+                      : "bg-secondary/30 border-border text-foreground"
                   }`}
                 >
                   {turn.role === "creditor" && (
-                    <div className="text-[10px] uppercase tracking-wider text-zinc-500 mb-0.5">
+                    <div className="font-mono text-[9px] tracking-[0.2em] uppercase text-muted-foreground mb-1">
                       Sarah
                     </div>
                   )}
@@ -436,7 +432,7 @@ export function PhoneRoleplayModal({ debt, leverage, onClose }: Props) {
 
             {isListening && interimTranscript && (
               <div className="flex justify-end">
-                <div className="max-w-[85%] rounded-2xl rounded-br-sm px-4 py-2.5 text-sm bg-blue-500/10 border border-blue-400/20 text-blue-200/70 italic">
+                <div className="max-w-[85%] px-4 py-2.5 text-sm border border-foreground/30 bg-secondary/20 text-muted-foreground italic">
                   {interimTranscript}
                 </div>
               </div>
@@ -444,11 +440,11 @@ export function PhoneRoleplayModal({ debt, leverage, onClose }: Props) {
 
             {isThinking && (
               <div className="flex justify-start">
-                <div className="bg-white/5 border border-white/10 rounded-2xl rounded-bl-sm px-4 py-3">
+                <div className="border border-border bg-secondary/20 px-4 py-3">
                   <div className="flex gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-zinc-400 animate-bounce" style={{ animationDelay: "0ms" }} />
-                    <span className="w-1.5 h-1.5 rounded-full bg-zinc-400 animate-bounce" style={{ animationDelay: "150ms" }} />
-                    <span className="w-1.5 h-1.5 rounded-full bg-zinc-400 animate-bounce" style={{ animationDelay: "300ms" }} />
+                    <span className="w-1.5 h-1.5 bg-muted-foreground animate-bounce" style={{ animationDelay: "0ms" }} />
+                    <span className="w-1.5 h-1.5 bg-muted-foreground animate-bounce" style={{ animationDelay: "150ms" }} />
+                    <span className="w-1.5 h-1.5 bg-muted-foreground animate-bounce" style={{ animationDelay: "300ms" }} />
                   </div>
                 </div>
               </div>
@@ -456,19 +452,19 @@ export function PhoneRoleplayModal({ debt, leverage, onClose }: Props) {
 
             {status === "settled" && settlementAmount !== null && (
               <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
+                initial={{ opacity: 0, scale: 0.97 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="bg-gradient-to-r from-emerald-500/15 to-blue-500/15 border border-emerald-400/30 rounded-xl p-4 mt-4"
+                className="border border-foreground p-5 bg-secondary/30 mt-4"
               >
-                <div className="flex items-center gap-2 text-emerald-400 text-sm font-semibold mb-1">
-                  <CheckCircle2 className="h-4 w-4" /> Deal closed
+                <div className="flex items-center gap-2 mb-2">
+                  <CheckCircle2 className="h-4 w-4 text-green-800" />
+                  <span className="font-mono text-[10px] tracking-[0.18em] uppercase text-green-800">Deal closed</span>
                 </div>
-                <div className="text-2xl font-bold text-white">
+                <div className="font-mono font-bold text-3xl" style={{ color: "hsl(var(--gold))" }}>
                   ${settlementAmount.toLocaleString()}
                 </div>
-                <div className="text-xs text-zinc-400 mt-1">
-                  You saved ${(debt.balance - settlementAmount).toLocaleString()} on a $
-                  {debt.balance.toLocaleString()} balance
+                <div className="font-mono text-xs text-muted-foreground mt-1">
+                  You saved ${(debt.balance - settlementAmount).toLocaleString()} on a ${debt.balance.toLocaleString()} balance
                 </div>
               </motion.div>
             )}
@@ -478,7 +474,7 @@ export function PhoneRoleplayModal({ debt, leverage, onClose }: Props) {
 
           {/* Controls */}
           {(status === "active" || status === "ringing" || status === "settled" || status === "declined") && (
-            <div className="border-t border-white/10 bg-black/40">
+            <div className="border-t border-foreground/20 bg-secondary/30">
               {callIsLive && (
                 <>
                   {/* Text input row */}
@@ -491,15 +487,15 @@ export function PhoneRoleplayModal({ debt, leverage, onClose }: Props) {
                       onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendText(); } }}
                       placeholder={isThinking ? "Sarah is thinking…" : "Type your response…"}
                       disabled={isThinking}
-                      className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-zinc-500 outline-none focus:border-emerald-500/50 transition-colors disabled:opacity-50"
+                      className="flex-1 border border-border bg-card px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/60 outline-none focus:border-foreground transition-colors disabled:opacity-50 font-mono"
                       autoComplete="off"
                     />
                     <button
                       onClick={sendText}
                       disabled={!canSend}
-                      className="w-10 h-10 rounded-xl bg-emerald-500 hover:bg-emerald-400 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center transition-all hover:scale-105 shrink-0"
+                      className="w-10 h-10 bg-foreground hover:bg-foreground/80 text-background disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center transition-all shrink-0"
                     >
-                      <Send className="h-4 w-4 text-black" />
+                      <Send className="h-4 w-4" />
                     </button>
                   </div>
                   {/* Mic + hang-up row */}
@@ -509,27 +505,27 @@ export function PhoneRoleplayModal({ debt, leverage, onClose }: Props) {
                         <button
                           onClick={isListening ? stopListening : startListening}
                           disabled={!canSpeak && !isListening}
-                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                          className={`flex items-center gap-1.5 px-3 py-1.5 font-mono text-[10px] tracking-[0.12em] uppercase border transition-all ${
                             isListening
-                              ? "bg-red-500/20 text-red-300 border border-red-500/30"
+                              ? "border-red-700/40 text-red-700 bg-red-50/30"
                               : canSpeak
-                              ? "bg-white/5 text-zinc-300 border border-white/10 hover:border-emerald-500/40"
-                              : "bg-white/5 text-zinc-500 border border-white/5 cursor-not-allowed opacity-50"
+                              ? "border-foreground text-foreground hover:bg-foreground hover:text-background"
+                              : "border-border text-muted-foreground cursor-not-allowed opacity-50"
                           }`}
                         >
                           {isListening ? (
-                            <><span className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" /><MicOff className="h-3.5 w-3.5" /> Stop</>
+                            <><span className="w-1.5 h-1.5 bg-red-700 animate-pulse" /><MicOff className="h-3.5 w-3.5" /> Stop</>
                           ) : (
                             <><Mic className="h-3.5 w-3.5" /> Voice</>
                           )}
                         </button>
                       ) : (
-                        <span className="text-xs text-zinc-500">Voice unavailable — type instead</span>
+                        <span className="font-mono text-[10px] text-muted-foreground">Voice unavailable — type instead</span>
                       )}
                     </div>
                     <button
                       onClick={endCall}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-600/20 text-red-300 border border-red-600/30 hover:bg-red-600/30 text-xs font-medium transition-colors"
+                      className="flex items-center gap-1.5 px-3 py-1.5 border border-red-700/40 text-red-700 hover:bg-red-50/30 font-mono text-[10px] tracking-[0.12em] uppercase transition-colors"
                     >
                       <PhoneOff className="h-3.5 w-3.5" /> End call
                     </button>
@@ -540,7 +536,7 @@ export function PhoneRoleplayModal({ debt, leverage, onClose }: Props) {
                 <div className="flex justify-center p-4">
                   <button
                     onClick={onClose}
-                    className="px-6 py-2.5 bg-white/10 hover:bg-white/20 text-white rounded-full text-sm font-medium transition-colors"
+                    className="px-6 py-2.5 border border-foreground/40 text-muted-foreground hover:border-foreground hover:text-foreground font-mono text-[10px] tracking-[0.15em] uppercase transition-colors"
                   >
                     Close
                   </button>
