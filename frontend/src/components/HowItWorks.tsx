@@ -11,7 +11,7 @@ const STEPS = [
   {
     icon: BrainCircuit,
     title: "02 / We Simulate",
-    body: "We run a month-by-month simulation of both Avalanche and Snowball strategies, then layer Claude AI for personalised advice. You see exact dollar savings and the months you'd shave off.",
+    body: "We run a month-by-month simulation of both Avalanche and Snowball strategies, then layer Llama 3.3 70B (via Groq) for personalised advice. You see exact dollar savings and the months you'd shave off.",
   },
   {
     icon: Phone,
