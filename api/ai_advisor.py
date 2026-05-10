@@ -1,7 +1,7 @@
 """
 AI financial-advice integration.
 
-Priority: Groq (free, no CC) → Anthropic Claude → deterministic fallback.
+Priority: Groq (Llama 3.3 70B Versatile, multi-key pool) → deterministic fallback.
 The fallback is always responsive so the demo never breaks.
 """
 from __future__ import annotations
@@ -45,27 +45,6 @@ def _set_cached(key: str, value):
 # ── Groq client pool (multi-key with failover) ───────────────────────────────
 
 from .groq_pool import call_with_failover
-
-
-# ── Anthropic client ──────────────────────────────────────────────────────────
-
-try:
-    import anthropic as _anthropic_sdk
-except ImportError:
-    _anthropic_sdk = None
-
-_ANTHROPIC_CLIENT = None
-
-
-def _get_anthropic_client():
-    global _ANTHROPIC_CLIENT
-    if _ANTHROPIC_CLIENT is not None or _anthropic_sdk is None:
-        return _ANTHROPIC_CLIENT
-    api_key = os.getenv("ANTHROPIC_API_KEY")
-    if not api_key:
-        return None
-    _ANTHROPIC_CLIENT = _anthropic_sdk.Anthropic(api_key=api_key)
-    return _ANTHROPIC_CLIENT
 
 
 # ── Prompt ────────────────────────────────────────────────────────────────────
@@ -236,8 +215,8 @@ def _fallback_analysis(debt_data: Dict[str, Any], results: Dict[str, Any]) -> st
 
 # ── Public API ────────────────────────────────────────────────────────────────
 
-def analyze_with_claude(debt_data: Dict[str, Any], results: Dict[str, Any]) -> Dict[str, Any]:
-    """Returns {text, source} where source is 'groq', 'claude', 'fallback', or *_cached."""
+def generate_analysis(debt_data: Dict[str, Any], results: Dict[str, Any]) -> Dict[str, Any]:
+    """Returns {text, source} where source is 'groq', 'fallback', or *_cached."""
     key = _cache_key(debt_data, results)
     cached = _get_cached(key)
     if cached:
@@ -266,24 +245,5 @@ def analyze_with_claude(debt_data: Dict[str, Any], results: Dict[str, Any]) -> D
         _set_cached(key, result)
         return result
 
-    # 2. Try Anthropic Claude
-    anthropic_client = _get_anthropic_client()
-    if anthropic_client:
-        try:
-            model = os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-6")
-            message = anthropic_client.messages.create(
-                model=model,
-                max_tokens=800,
-                temperature=0.4,
-                messages=[{"role": "user", "content": prompt}],
-            )
-            text = (message.content[0].text if message.content else "").strip()
-            if text:
-                result = {"text": text, "source": "claude"}
-                _set_cached(key, result)
-                return result
-        except Exception as exc:
-            logger.warning("Anthropic API failed; using fallback: %s", exc)
-
-    # 3. Deterministic fallback
+    # 2. Deterministic fallback
     return {"text": _fallback_analysis(debt_data, results), "source": "fallback"}

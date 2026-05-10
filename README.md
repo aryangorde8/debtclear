@@ -1,7 +1,7 @@
 # DebtClear — AI-Powered Debt Strategy Engine
 
 > **Pay off debt smarter. Save thousands.**
-> A mathematically rigorous debt-payoff analyzer that simulates Avalanche vs Snowball strategies on real numbers, then layers a fast LLM (Llama 3.3 70B via Groq, with Anthropic Claude as fallback) for personalized, dollar-grounded financial advice, settlement-negotiation scripts, voice-call practice, and downloadable plans.
+> A mathematically rigorous debt-payoff analyzer that simulates Avalanche vs Snowball strategies on real numbers, then layers a fast LLM (Llama 3.3 70B via Groq) for personalized, dollar-grounded financial advice, settlement-negotiation scripts, voice-call practice, and downloadable plans.
 
 [![Python](https://img.shields.io/badge/Python-3.12-3776AB.svg)](https://python.org)
 [![Django](https://img.shields.io/badge/Django-5.0-092E20.svg)](https://www.djangoproject.com/)
@@ -10,7 +10,6 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6.svg)](https://www.typescriptlang.org/)
 [![Tailwind](https://img.shields.io/badge/Tailwind-3.4-06B6D4.svg)](https://tailwindcss.com/)
 [![Groq](https://img.shields.io/badge/Groq-Llama%203.3%2070B-F55036.svg)](https://groq.com/)
-[![Claude](https://img.shields.io/badge/Fallback-Claude%20Sonnet%204.6-D97757.svg)](https://www.anthropic.com/)
 [![AWS EC2](https://img.shields.io/badge/Deployed-AWS%20EC2-FF9900.svg)](https://aws.amazon.com/ec2/)
 
 **Live demo:** https://debtclear.aryangorde.com
@@ -31,7 +30,7 @@ DebtClear takes a user's debt portfolio (multiple debts with balance, APR, minim
 2. Computes total interest paid, months to debt-free, and the exact dollar / time difference between the two active strategies vs. the do-nothing baseline.
 3. Calculates a **Financial Stress Score (0–100)** combining debt-to-income ratio, monthly-payment burden, and weighted average rate.
 4. Visualises the payoff trajectory, debt mix, milestone timeline, and "cost of waiting" with interactive Recharts charts.
-5. Sends the math to **Llama 3.3 70B** (via Groq's low-latency inference API) for a 3-paragraph personalised analysis, with **Anthropic Claude Sonnet 4.6** wired as a direct-API fallback for resilience.
+5. Sends the math to **Llama 3.3 70B** (via Groq's low-latency inference API) for a 3-paragraph personalised analysis.
 6. Lets the user **chat with an AI advisor** that has their full snapshot in context ("what if I lose my job?", "should I refinance?").
 7. Exposes a **Negotiate Mode** for every debt — leverage scoring, settlement ranges, full phone scripts, voice roleplay, and certified-mail letters.
 8. Exports the entire plan as a **downloadable PDF**.
@@ -49,14 +48,14 @@ Most consumers don't know that **creditors regularly settle debts for 40–60% o
 5. **Practice the call** — a built-in voice roleplay where the user negotiates against an AI collections agent that pushes back, counters, and only settles if they make a strong case (Web Speech API for STT/TTS).
 6. **Generate a formal settlement letter** — certified-mail-ready text the user can copy or download as PDF.
 
-Every engine ships with a deterministic fallback so the app never produces an empty card, even when both LLM providers are unreachable.
+Every engine ships with a deterministic fallback so the app never produces an empty card, even when Groq is unreachable.
 
 ## Tech Stack
 
 | Layer       | Choice                                                                                                |
 |-------------|-------------------------------------------------------------------------------------------------------|
 | **Backend** | Python 3.12, Django 5.0, Django REST Framework 3.15, django-cors-headers, python-dotenv               |
-| **AI**      | **Groq** (`llama-3.3-70b-versatile`) primary · **Anthropic** (`claude-sonnet-4-6`) fallback · deterministic last-resort |
+| **AI**      | **Groq** — `llama-3.3-70b-versatile` (sole provider) with deterministic per-engine fallback           |
 | **AI infra**| Multi-key Groq client pool (`api/groq_pool.py`) with round-robin failover, 20s hard timeout, `max_retries=0` |
 | **Frontend**| Next.js 14 (App Router), TypeScript 5, Tailwind CSS 3.4, Framer Motion 12, Recharts 3, jsPDF 4, Lucide icons, Sonner toasts |
 | **UI primitives** | shadcn/ui on top of Radix UI (dialog, progress, slot, tabs, tooltip)                            |
@@ -123,25 +122,17 @@ Every engine ships with a deterministic fallback so the app never produces an em
                           fallback if all keys fail
                                     ▼
                   ┌────────────────────────────────────────────────┐
-                  │     Anthropic Claude (claude-sonnet-4-6)       │
-                  │  Direct Anthropic API — NOT AWS Bedrock         │
-                  └─────────────────┬──────────────────────────────┘
-                                    │
-                       fallback if Anthropic fails
-                                    ▼
-                  ┌────────────────────────────────────────────────┐
                   │ Deterministic per-engine fallback (data-driven)│
                   └────────────────────────────────────────────────┘
 ```
 
 The simulation in `api/debt_engine.py` is **deterministic and pure-Python** — no hidden ML, no random sampling. Every dollar shown in the UI is traceable to that file. The LLM is given the math and writes the prose; it never invents the numbers.
 
-### Why Groq + Claude fallback?
+### Why Groq only?
 
-- **Groq's Llama 3.3 70B inference** runs at ~hundreds of tokens/sec, keeping the analyze and negotiate flows under ~2 seconds end-to-end.
+- **Llama 3.3 70B Versatile on Groq** runs at ~hundreds of tokens/sec, keeping the analyze and negotiate flows under ~2 seconds end-to-end — fast enough that the UI never feels like it's waiting on an LLM.
 - A **multi-key Groq pool** (`api/groq_pool.py`) round-robins across keys with automatic failover so a single rate-limited key doesn't break the demo. Each client is built with `max_retries=0` and a 20-second timeout so failover happens fast.
-- If every Groq key is exhausted, calls fall through to **Anthropic Claude Sonnet 4.6** via the direct Anthropic API (not AWS Bedrock).
-- If both providers are down, every engine returns a deterministic, data-driven response built from the user's actual numbers — the app never breaks.
+- If every Groq key is rate-limited or unreachable, every engine returns a deterministic, data-driven response built from the user's actual numbers — the app never breaks.
 
 ### LLM call parameters per engine
 
@@ -149,10 +140,10 @@ The simulation in `api/debt_engine.py` is **deterministic and pure-Python** — 
 |-----------------------|--------------|---------------|-------------------------------|
 | `ai_advisor`          | 800          | 0.4           | 3-paragraph plan analysis      |
 | `chat_engine`         | 300          | 0.5           | Short Q&A turns                |
-| `script_generator`    | (large)      | 0.6           | Full 7-section phone script    |
+| `script_generator`    | 1500         | 0.3           | Full 7-section phone script    |
 | `roleplay_engine`     | 200          | 0.7           | Single creditor turn           |
 | `letter_generator`    | 1000         | 0.3           | Formal settlement letter body  |
-| `negotiation_engine`  | 60           | 0.2           | Leverage analysis (small JSON) |
+| `negotiation_engine`  | 60           | 0.2           | Settlement-range JSON          |
 
 Frontend routes are static: `/` (hero), `/how-it-works`, `/analyze` (debt form), `/results` (dashboard). Result data passes from `/analyze` to `/results` via `localStorage`.
 
@@ -171,7 +162,7 @@ source venv/bin/activate         # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 
 # 3. Configure environment
-cp .env.example .env             # then add GROQ_API_KEYS / ANTHROPIC_API_KEY
+cp .env.example .env             # then add GROQ_API_KEYS
 
 # 4. Run Django on port 8002 (the frontend expects this)
 python manage.py runserver 0.0.0.0:8002
@@ -182,11 +173,10 @@ python manage.py runserver 0.0.0.0:8002
 ```bash
 cd frontend
 npm install
-cp .env.local.example .env.local 2>/dev/null || true   # optional
 npm run dev                       # → http://localhost:3000
 ```
 
-If you don't add Groq or Anthropic credentials, the app still works — every engine falls back to a deterministic, data-driven response that uses the user's actual numbers. Add `GROQ_API_KEYS` (comma-separated for the multi-key pool) to switch on Llama 3.3, and optionally `ANTHROPIC_API_KEY` for the Claude fallback.
+If you don't add Groq credentials, the app still works — every engine falls back to a deterministic, data-driven response that uses the user's actual numbers. Add `GROQ_API_KEYS` (comma-separated for the multi-key pool) to switch on Llama 3.3.
 
 ## Required Environment Variables
 
@@ -198,14 +188,10 @@ DJANGO_SECRET_KEY=<generate-a-long-random-string>
 DJANGO_DEBUG=False
 DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1,debtclear.aryangorde.com
 
-# ── Groq (PRIMARY AI: Llama 3.3 70B Versatile) ───────────────────────────────
+# ── Groq (the only AI provider — Llama 3.3 70B Versatile) ────────────────────
 # Comma-separated keys enable the multi-key failover pool. A single key works too.
 GROQ_API_KEYS=gsk_key_one,gsk_key_two,gsk_key_three
 GROQ_MODEL=llama-3.3-70b-versatile
-
-# ── Anthropic Claude (FALLBACK — used only if every Groq key is rate-limited) ─
-ANTHROPIC_API_KEY=sk-ant-api03-...
-ANTHROPIC_MODEL=claude-sonnet-4-6
 ```
 
 Frontend (`frontend/.env.local`):
@@ -253,11 +239,11 @@ Full debt analysis with both strategies, stress score, and AI commentary.
 }
 ```
 
-`ai_source` is one of `groq`, `claude`, or `fallback`.
+`ai_source` is one of `groq` or `fallback`.
 
 ### `POST /api/simulate/`
 
-Lightweight what-if endpoint — same simulation as `/api/analyze/` but skips the AI call. Used by the in-app "what-if slider" to recompute payoff numbers as the user drags the extra-payment slider.
+Lightweight what-if endpoint — same simulation as `/api/analyze/` but skips the LLM call. Used by the in-app "what-if slider" to recompute payoff numbers as the user drags the extra-payment slider.
 
 ### `POST /api/negotiate/`
 

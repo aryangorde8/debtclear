@@ -15,24 +15,6 @@ from .groq_pool import call_with_failover
 
 logger = logging.getLogger(__name__)
 
-try:
-    import anthropic as _anthropic_sdk
-except ImportError:
-    _anthropic_sdk = None
-
-_ANTHROPIC_CLIENT = None
-
-
-def _get_anthropic_client():
-    global _ANTHROPIC_CLIENT
-    if _ANTHROPIC_CLIENT is not None or _anthropic_sdk is None:
-        return _ANTHROPIC_CLIENT
-    api_key = os.getenv("ANTHROPIC_API_KEY")
-    if not api_key:
-        return None
-    _ANTHROPIC_CLIENT = _anthropic_sdk.Anthropic(api_key=api_key)
-    return _ANTHROPIC_CLIENT
-
 
 def _system_prompt(snapshot: Dict[str, Any]) -> str:
     debts = snapshot.get("debts", [])
@@ -120,23 +102,5 @@ def answer_question(snapshot: Dict[str, Any], history: List[Dict[str, str]], que
     if text:
         return {"text": text, "source": "groq"}
 
-    # 2. Anthropic
-    client = _get_anthropic_client()
-    if client:
-        try:
-            model = os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-6")
-            msg = client.messages.create(
-                model=model,
-                max_tokens=300,
-                temperature=0.5,
-                system=system,
-                messages=messages,
-            )
-            text = (msg.content[0].text if msg.content else "").strip()
-            if text:
-                return {"text": text, "source": "claude"}
-        except Exception as exc:
-            logger.warning("chat_engine anthropic failed: %s", exc)
-
-    # 3. Deterministic
+    # 2. Deterministic fallback
     return {"text": _fallback_reply(question, snapshot), "source": "fallback"}

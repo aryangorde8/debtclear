@@ -17,24 +17,6 @@ from .groq_pool import call_with_failover
 
 logger = logging.getLogger(__name__)
 
-try:
-    import anthropic as _anthropic_sdk
-except ImportError:
-    _anthropic_sdk = None
-
-_ANTHROPIC_CLIENT = None
-
-
-def _anthropic():
-    global _ANTHROPIC_CLIENT
-    if _ANTHROPIC_CLIENT is not None or _anthropic_sdk is None:
-        return _ANTHROPIC_CLIENT
-    key = os.getenv("ANTHROPIC_API_KEY")
-    if not key:
-        return None
-    _ANTHROPIC_CLIENT = _anthropic_sdk.Anthropic(api_key=key)
-    return _ANTHROPIC_CLIENT
-
 
 def _system_prompt(debt: Dict[str, Any], leverage: Dict[str, Any]) -> str:
     balance = float(debt["balance"])
@@ -182,21 +164,6 @@ def generate_creditor_turn(
         return (resp.choices[0].message.content or "").strip()
 
     raw = call_with_failover(_call_groq)
-
-    if raw is None:
-        anth = _anthropic()
-        if anth:
-            try:
-                msg = anth.messages.create(
-                    model=os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-6"),
-                    max_tokens=200,
-                    temperature=0.7,
-                    system=system,
-                    messages=messages,
-                )
-                raw = (msg.content[0].text if msg.content else "").strip()
-            except Exception as exc:
-                logger.warning("Anthropic roleplay failed: %s", exc)
 
     if not raw:
         return _fallback_response(history, debt, leverage)

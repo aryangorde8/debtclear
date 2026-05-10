@@ -91,7 +91,7 @@ def analyze(request):
             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
 
-    advice = ai_advisor.analyze_with_claude(clean, results)
+    advice = ai_advisor.generate_analysis(clean, results)
     results["ai_analysis"] = advice["text"]
     results["ai_source"] = advice["source"]
 

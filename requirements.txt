@@ -5,4 +5,3 @@ python-dotenv==1.0.1
 gunicorn==22.0.0
 whitenoise==6.7.0
 groq>=0.13.0
-anthropic==0.34.2

@@ -1,7 +1,7 @@
 """
 Negotiation script generation.
 
-Priority: Groq (free, no CC) → Anthropic Claude → deterministic fallback.
+Priority: Groq (Llama 3.3 70B Versatile, multi-key pool) → deterministic fallback.
 All expected sections are always returned — missing ones from the LLM are
 filled deterministically so the UI never renders an empty card.
 """
@@ -58,27 +58,6 @@ SECTION_TITLES = {key: title for key, title in SECTION_ORDER}
 # ── Groq client pool ──────────────────────────────────────────────────────────
 
 from .groq_pool import call_with_failover
-
-
-# ── Anthropic client ──────────────────────────────────────────────────────────
-
-try:
-    import anthropic as _anthropic_sdk
-except ImportError:
-    _anthropic_sdk = None
-
-_ANTHROPIC_CLIENT = None
-
-
-def _get_anthropic_client():
-    global _ANTHROPIC_CLIENT
-    if _ANTHROPIC_CLIENT is not None or _anthropic_sdk is None:
-        return _ANTHROPIC_CLIENT
-    api_key = os.getenv("ANTHROPIC_API_KEY")
-    if not api_key:
-        return None
-    _ANTHROPIC_CLIENT = _anthropic_sdk.Anthropic(api_key=api_key)
-    return _ANTHROPIC_CLIENT
 
 
 # ── Prompt & parsing ──────────────────────────────────────────────────────────
@@ -285,7 +264,7 @@ def generate_negotiation_script(
     leverage: Dict[str, Any],
     financial_context: Dict[str, Any],
 ) -> Dict[str, Any]:
-    """Returns {sections, source, raw} where source is 'groq', 'claude', or 'fallback'."""
+    """Returns {sections, source, raw} where source is 'groq' or 'fallback'."""
     key = _cache_key(debt, financial_context)
     cached = _get_cached(key)
     if cached:
@@ -321,31 +300,7 @@ def generate_negotiation_script(
         _set_cached(key, result)
         return result
 
-    # 2. Try Anthropic Claude
-    anthropic_client = _get_anthropic_client()
-    if anthropic_client:
-        try:
-            model = os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-6")
-            message = anthropic_client.messages.create(
-                model=model,
-                max_tokens=1500,
-                temperature=0.3,
-                messages=[{"role": "user", "content": prompt}],
-            )
-            raw = (message.content[0].text if message.content else "").strip()
-            parsed = _parse_sections(raw)
-            if parsed:
-                result = {
-                    "sections": _normalise_sections(parsed, fallback),
-                    "source": "claude",
-                    "raw": raw,
-                }
-                _set_cached(key, result)
-                return result
-        except Exception as exc:
-            logger.warning("Anthropic script generation failed; using fallback: %s", exc)
-
-    # 3. Deterministic fallback
+    # 2. Deterministic fallback
     return {
         "sections": _normalise_sections({}, fallback),
         "source": "fallback",
