@@ -20,7 +20,7 @@ DEBUG = env_bool("DJANGO_DEBUG", False)
 ALLOWED_HOSTS = [
     h.strip() for h in os.getenv(
         "DJANGO_ALLOWED_HOSTS",
-        "localhost,127.0.0.1,.onrender.com",
+        "localhost,127.0.0.1,debtclear.aryangorde.com",
     ).split(",")
     if h.strip()
 ]
