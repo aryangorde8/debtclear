@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="en" class="bg-slate-950">
+<html lang="en" class="dark">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>DebtClear — Pay Off Debt Smarter. Save Thousands.</title>
-  <meta name="description" content="A mathematically rigorous debt payoff analyzer. Compare Avalanche vs Snowball strategies and see exactly how much interest you'll save." />
+  <title>DebtClear — Crush Your Debt. Save Thousands.</title>
+  <meta name="description" content="Model Avalanche vs Snowball strategies with real math, get a personalized AI stress score, and generate a word-for-word negotiation script to settle your debt for less." />
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%92%B0%3C/text%3E%3C/svg%3E" />
 
   <script src="https://cdn.tailwindcss.com"></script>
@@ -16,9 +16,11 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@studio-freight/lenis@1.0.42/dist/lenis.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
   <script>
     tailwind.config = {
+      darkMode: 'class',
       theme: {
         extend: {
           fontFamily: {
@@ -26,10 +28,9 @@
             mono: ['JetBrains Mono', 'ui-monospace'],
           },
           colors: {
+            primary: { DEFAULT: '#3b82f6', foreground: '#05060a' },
+            accent: { DEFAULT: '#8b5cf6' },
             ink: { 950: '#05060a', 900: '#0a0c14', 800: '#10131c', 700: '#191d2a' },
-          },
-          boxShadow: {
-            glow: '0 0 40px -10px rgba(99, 102, 241, 0.5)',
           },
         },
       },
@@ -37,1070 +38,1552 @@
   </script>
 
   <style>
-    html, body { background: #05060a; color: #e2e8f0; font-family: 'Inter', ui-sans-serif, system-ui; }
-    body { font-feature-settings: 'cv11', 'ss01', 'ss03'; }
+    /* ── Design tokens (ported from the Next.js shadcn theme) ── */
+    :root {
+      --background: 222 47% 4%;
+      --foreground: 213 31% 91%;
+      --muted-foreground: 215 20% 55%;
+      --border: 222 47% 14%;
+      --primary: 217 91% 60%;
+      --accent: 258 90% 66%;
+    }
+    html, body { background: #000; color: hsl(var(--foreground)); font-family: 'Inter', ui-sans-serif, system-ui; }
+    body { font-feature-settings: 'cv11','ss01','ss03'; }
+    .text-muted-foreground { color: hsl(var(--muted-foreground)); }
+
+    /* Gradient text — matches the two hero gradients + green accent */
     .gradient-text {
-      background: linear-gradient(135deg, #818cf8 0%, #c084fc 35%, #f472b6 70%, #fb923c 100%);
-      -webkit-background-clip: text;
-      background-clip: text;
-      -webkit-text-fill-color: transparent;
+      background: linear-gradient(90deg, #bfdbfe 0%, #67e8f9 50%, #c4b5fd 100%);
+      -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
     }
-    .grid-bg {
-      background-image:
-        radial-gradient(circle at 50% 0%, rgba(99, 102, 241, 0.18), transparent 55%),
-        linear-gradient(rgba(148, 163, 184, 0.04) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(148, 163, 184, 0.04) 1px, transparent 1px);
-      background-size: 100% 100%, 56px 56px, 56px 56px;
-      background-position: 0 0, 0 0, 0 0;
+    .gradient-text-2 {
+      background: linear-gradient(90deg, #c4b5fd 0%, #f0abfc 50%, #93c5fd 100%);
+      -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
     }
-    .glass {
-      background: linear-gradient(180deg, rgba(20, 23, 35, 0.65) 0%, rgba(10, 12, 20, 0.9) 100%);
-      border: 1px solid rgba(148, 163, 184, 0.10);
-      backdrop-filter: blur(12px);
+    .gradient-text-green {
+      background: linear-gradient(135deg, #34d399 0%, #2dd4bf 100%);
+      -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
     }
-    .glass:hover { border-color: rgba(148, 163, 184, 0.18); }
+
+    .glass { background: rgba(0,0,0,0.5); backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.10); }
+    .glow-blue { box-shadow: 0 0 60px hsl(217 91% 60% / 0.12); }
+
+    /* Inputs */
     .input-base {
-      background: rgba(8, 10, 16, 0.85);
-      border: 1px solid rgba(148, 163, 184, 0.14);
-      color: #f1f5f9;
-      transition: all 0.18s ease;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.10);
+      color: #f1f5f9; transition: all 0.18s ease;
     }
-    .input-base:focus {
-      outline: none;
-      border-color: #818cf8;
-      box-shadow: 0 0 0 4px rgba(129, 140, 248, 0.15);
-    }
-    .btn-primary {
-      background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-      transition: transform 0.15s ease, box-shadow 0.2s ease;
-    }
-    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 12px 36px -8px rgba(99, 102, 241, 0.55); }
-    .btn-primary:active { transform: translateY(0); }
-    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
-    .winner-glow { box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.55), 0 12px 60px -16px rgba(34, 197, 94, 0.4); }
-    .stress-ring { transform: rotate(-90deg); }
-    .spinner {
-      width: 18px; height: 18px;
-      border: 2.5px solid rgba(255, 255, 255, 0.25);
-      border-top-color: #fff; border-radius: 50%;
-      animation: spin 0.7s linear infinite;
-    }
+    .input-base:focus { outline: none; border-color: rgba(96,165,250,0.5); background: rgba(255,255,255,0.07); }
+    input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; }
+    input[type=number] { -moz-appearance: textfield; }
+
+    /* White pill CTA (hero / submit) */
+    .btn-white { background:#fff; color:#000; transition: transform .3s ease, box-shadow .3s ease; }
+    .btn-white:hover { transform: scale(1.05); box-shadow: 0 24px 60px -12px rgba(255,255,255,0.2); }
+    .btn-white:disabled { opacity:.7; transform:none; cursor:not-allowed; }
+
+    .spinner { width:18px; height:18px; border:2.5px solid rgba(255,255,255,0.25); border-top-color:#fff; border-radius:50%; animation: spin .7s linear infinite; }
+    .spinner-blue { border-color: rgba(59,130,246,0.25); border-top-color:#3b82f6; }
     @keyframes spin { to { transform: rotate(360deg); } }
+
+    .stress-ring { transform: rotate(-90deg); }
     .fade-init { opacity: 0; transform: translateY(24px); }
     [hidden] { display: none !important; }
-    ::selection { background: rgba(129, 140, 248, 0.45); color: white; }
+    ::selection { background: rgba(129,140,248,0.45); color:#fff; }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width:6px; height:6px; }
+    ::-webkit-scrollbar-track { background: hsl(222 47% 4%); }
+    ::-webkit-scrollbar-thumb { background: hsl(222 47% 14%); border-radius:3px; }
+    ::-webkit-scrollbar-thumb:hover { background: hsl(215 20% 55%); }
+
+    /* Hero entrance animations (ported from globals.css) */
+    @keyframes fade-in-down { from { opacity:0; transform:translateY(-20px);} to { opacity:1; transform:translateY(0);} }
+    @keyframes fade-in-up-hero { from { opacity:0; transform:translateY(30px);} to { opacity:1; transform:translateY(0);} }
+    .animate-fade-in-down { animation: fade-in-down .8s ease-out forwards; }
+    .animate-fade-in-up { animation: fade-in-up-hero .8s ease-out forwards; opacity:0; }
+    .animation-delay-200 { animation-delay:.2s; }
+    .animation-delay-400 { animation-delay:.4s; }
+    .animation-delay-600 { animation-delay:.6s; }
+    .animation-delay-800 { animation-delay:.8s; }
+    @media (prefers-reduced-motion: reduce) {
+      .animate-ping, .animate-pulse, .animate-spin, .animate-bounce,
+      .animate-fade-in-up, .animate-fade-in-down { animation: none !important; opacity: 1 !important; }
+    }
+
+    /* What-if range slider */
+    input[type=range].wi-range { -webkit-appearance:none; appearance:none; height:8px; border-radius:9999px; outline:none; }
+    input[type=range].wi-range::-webkit-slider-thumb { -webkit-appearance:none; width:20px; height:20px; border-radius:9999px; background:#34d399; box-shadow:0 0 12px rgba(16,185,129,0.6); cursor:pointer; }
+    input[type=range].wi-range::-moz-range-thumb { width:20px; height:20px; border:0; border-radius:9999px; background:#34d399; cursor:pointer; }
+
+    /* Letter "paper" */
+    .letter-paper { background:#fff; color:#18181b; font-family: 'Times New Roman', Times, serif; }
+
+    .typing-dot { width:6px; height:6px; border-radius:9999px; background:#a1a1aa; display:inline-block; animation: tbounce 1s infinite; }
+    @keyframes tbounce { 0%,80%,100%{ transform: translateY(0); opacity:.5;} 40%{ transform: translateY(-4px); opacity:1;} }
   </style>
 </head>
 
-<body class="min-h-screen overflow-x-hidden">
-  <!-- NAV -->
-  <header class="fixed top-0 inset-x-0 z-50 backdrop-blur-md bg-ink-950/70 border-b border-white/5">
+<body class="min-h-screen overflow-x-hidden text-white antialiased">
+
+  <!-- ============ SHADER BACKGROUND ============ -->
+  <div class="fixed inset-0 -z-10 pointer-events-none">
+    <canvas id="shader-canvas" class="absolute inset-0 w-full h-full" style="image-rendering:auto"></canvas>
+    <div class="absolute inset-0 bg-gradient-to-b from-black/30 via-black/50 to-black/70"></div>
+  </div>
+
+  <!-- ============ NAV ============ -->
+  <header class="fixed top-0 inset-x-0 z-40 backdrop-blur-md bg-black/40 border-b border-white/5">
     <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-      <a href="#" class="flex items-center gap-2.5 group">
-        <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-fuchsia-500 grid place-items-center text-white font-bold text-sm">D</div>
-        <span class="font-semibold tracking-tight text-slate-100">DebtClear</span>
+      <a href="#top" class="flex items-center gap-2.5 group">
+        <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-violet-500 grid place-items-center text-white font-bold text-sm">D</div>
+        <span class="font-semibold tracking-tight text-white">DebtClear</span>
       </a>
-      <nav class="hidden md:flex items-center gap-7 text-sm text-slate-400">
-        <a href="#how" class="hover:text-slate-100 transition">How it works</a>
-        <a href="#analyze" class="hover:text-slate-100 transition">Analyze</a>
-        <a href="https://github.com/" target="_blank" rel="noopener" class="hover:text-slate-100 transition">GitHub</a>
+      <nav class="hidden md:flex items-center gap-7 text-sm text-white/60">
+        <a href="#how" class="hover:text-white transition">How it works</a>
+        <a href="#analyze" class="hover:text-white transition">Analyze</a>
       </nav>
-      <a href="#analyze" class="text-sm font-medium px-4 py-2 rounded-lg btn-primary text-white">Get Started</a>
+      <a href="#analyze" class="text-sm font-semibold px-5 py-2 rounded-full btn-white">Get Started</a>
     </div>
   </header>
 
-  <!-- HERO -->
-  <section class="relative pt-40 pb-28 grid-bg">
-    <div class="max-w-5xl mx-auto px-6 text-center">
-      <div data-anim="hero-tag" class="fade-init inline-flex items-center gap-2 text-xs font-medium tracking-wide text-indigo-300 bg-indigo-500/10 border border-indigo-400/20 rounded-full px-3 py-1.5 mb-7">
-        <span class="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse"></span>
-        Powered by Claude Sonnet 4.6 on AWS Bedrock
-      </div>
-      <h1 data-anim="hero-h1" class="fade-init text-5xl md:text-7xl font-extrabold tracking-tight leading-[1.05] mb-6">
-        Pay Off Debt Smarter.<br />
-        <span class="gradient-text">Save Thousands.</span>
-      </h1>
-      <p data-anim="hero-sub" class="fade-init text-lg md:text-xl text-slate-400 max-w-2xl mx-auto mb-10 leading-relaxed">
-        Most people pay off debt in the wrong order and lose thousands to interest. DebtClear simulates Avalanche vs Snowball on your real numbers and tells you exactly which one wins.
-      </p>
-      <div data-anim="hero-cta" class="fade-init flex items-center justify-center gap-4">
-        <a href="#analyze" class="btn-primary text-white font-semibold px-7 py-3.5 rounded-xl shadow-glow">Analyze My Debt</a>
-        <a href="#how" class="text-slate-300 hover:text-white font-medium px-5 py-3.5 transition">See how it works →</a>
-      </div>
-      <div data-anim="hero-stats" class="fade-init mt-20 grid grid-cols-3 gap-6 max-w-3xl mx-auto">
-        <div class="text-center">
-          <div class="text-3xl md:text-4xl font-bold text-white">77%</div>
-          <div class="text-xs text-slate-500 mt-1.5 tracking-wide uppercase">of adults carry multiple debts</div>
+  <!-- ============ HERO (AnimatedShaderHero) ============ -->
+  <section id="top" class="relative w-full min-h-screen flex flex-col items-center justify-center px-4">
+    <div class="relative z-10 flex flex-col items-center justify-center text-white max-w-5xl mx-auto">
+      <div class="mb-8 animate-fade-in-down">
+        <div class="flex items-center gap-2 px-5 py-2 bg-white/5 backdrop-blur-md border border-white/10 rounded-full text-sm">
+          <span class="relative flex h-2 w-2">
+            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+            <span class="relative inline-flex rounded-full h-2 w-2 bg-blue-400"></span>
+          </span>
+          <span class="text-white/80">AI-Powered Debt Strategy Engine</span>
         </div>
-        <div class="text-center">
-          <div class="text-3xl md:text-4xl font-bold gradient-text">$1,200</div>
-          <div class="text-xs text-slate-500 mt-1.5 tracking-wide uppercase">avg interest saved with right order</div>
+      </div>
+      <div class="text-center space-y-6">
+        <div class="space-y-1">
+          <h1 class="text-5xl md:text-7xl lg:text-8xl font-bold gradient-text animate-fade-in-up animation-delay-200 leading-[1.05]">Crush Your Debt.</h1>
+          <h1 class="text-5xl md:text-7xl lg:text-8xl font-bold gradient-text-2 animate-fade-in-up animation-delay-400 leading-[1.05]">Save Thousands.</h1>
         </div>
-        <div class="text-center">
-          <div class="text-3xl md:text-4xl font-bold text-white">~12</div>
-          <div class="text-xs text-slate-500 mt-1.5 tracking-wide uppercase">months sooner to debt-free</div>
+        <div class="max-w-3xl mx-auto animate-fade-in-up animation-delay-600">
+          <p class="text-lg md:text-xl text-white/70 font-light leading-relaxed">
+            Model Avalanche vs. Snowball strategies with real math, get a personalized AI stress score, and generate a word-for-word negotiation script to settle your debt for less.
+          </p>
+        </div>
+        <div class="flex flex-col sm:flex-row gap-4 justify-center mt-10 animate-fade-in-up animation-delay-800">
+          <a href="#analyze" class="px-8 py-4 btn-white rounded-full font-semibold text-base inline-flex items-center justify-center gap-2">Analyze My Debt →</a>
+          <a href="#how" class="px-8 py-4 bg-white/5 hover:bg-white/10 border border-white/20 hover:border-white/40 text-white rounded-full font-semibold text-base transition-all duration-300 hover:scale-105 backdrop-blur-md inline-flex items-center justify-center">How it works</a>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- HOW IT WORKS -->
-  <section id="how" class="py-20 border-t border-white/5">
-    <div class="max-w-6xl mx-auto px-6">
-      <div class="text-center mb-14">
-        <h2 class="text-3xl md:text-4xl font-bold tracking-tight mb-3">Two strategies. One winner. Real math.</h2>
-        <p class="text-slate-400 max-w-2xl mx-auto">DebtClear runs a month-by-month simulation of how interest compounds and how each strategy attacks your specific portfolio.</p>
+  <!-- ============ HOW IT WORKS ============ -->
+  <section id="how" class="relative py-32 px-4">
+    <div class="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent pointer-events-none"></div>
+    <div class="relative max-w-5xl mx-auto">
+      <div data-reveal class="text-center mb-16">
+        <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/5 border border-white/10 backdrop-blur-md mb-6">
+          <span class="text-xs uppercase tracking-widest text-white/60">How it works</span>
+        </div>
+        <h2 class="text-4xl md:text-6xl font-bold leading-[1.05]">
+          <span class="gradient-text">Three steps</span><br />
+          <span class="gradient-text-2">to a payoff plan.</span>
+        </h2>
       </div>
-      <div class="grid md:grid-cols-3 gap-5">
-        <div class="glass rounded-2xl p-6">
-          <div class="w-10 h-10 rounded-lg bg-indigo-500/15 text-indigo-300 grid place-items-center mb-4 font-mono font-bold">01</div>
-          <h3 class="text-lg font-semibold text-white mb-1.5">Enter your debts</h3>
-          <p class="text-sm text-slate-400 leading-relaxed">Balance, APR, and minimum payment for each debt. Add as many as you have.</p>
-        </div>
-        <div class="glass rounded-2xl p-6">
-          <div class="w-10 h-10 rounded-lg bg-fuchsia-500/15 text-fuchsia-300 grid place-items-center mb-4 font-mono font-bold">02</div>
-          <h3 class="text-lg font-semibold text-white mb-1.5">We simulate both strategies</h3>
-          <p class="text-sm text-slate-400 leading-relaxed">Avalanche (highest rate first) vs Snowball (lowest balance first), with real compounding interest.</p>
-        </div>
-        <div class="glass rounded-2xl p-6">
-          <div class="w-10 h-10 rounded-lg bg-orange-500/15 text-orange-300 grid place-items-center mb-4 font-mono font-bold">03</div>
-          <h3 class="text-lg font-semibold text-white mb-1.5">Claude advises you</h3>
-          <p class="text-sm text-slate-400 leading-relaxed">Anthropic's Claude Sonnet 4.6 reads the math and tells you exactly what to do this month.</p>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ANALYZE FORM -->
-  <section id="analyze" class="py-20 border-t border-white/5">
-    <div class="max-w-3xl mx-auto px-6">
-      <div class="text-center mb-10">
-        <h2 class="text-3xl md:text-4xl font-bold tracking-tight mb-3">Enter your numbers</h2>
-        <p class="text-slate-400">Nothing leaves your browser except this analysis request. We don't store your data.</p>
-      </div>
-
-      <form id="debt-form" class="glass rounded-2xl p-6 md:p-8 space-y-7">
-        <div class="grid md:grid-cols-2 gap-5">
-          <label class="block">
-            <span class="block text-sm font-medium text-slate-300 mb-2">Monthly income (after tax)</span>
-            <div class="relative">
-              <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-mono">$</span>
-              <input type="number" name="monthly_income" min="1" step="any" required value="5000"
-                     class="input-base w-full pl-9 pr-4 py-3 rounded-xl text-base font-medium" />
-            </div>
-          </label>
-          <label class="block">
-            <span class="block text-sm font-medium text-slate-300 mb-2">Extra monthly payment available</span>
-            <div class="relative">
-              <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-mono">$</span>
-              <input type="number" name="extra_payment" min="0" step="any" required value="200"
-                     class="input-base w-full pl-9 pr-4 py-3 rounded-xl text-base font-medium" />
-            </div>
-          </label>
-        </div>
-
-        <div>
-          <div class="flex items-end justify-between mb-3">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+        <div data-reveal class="relative group">
+          <div class="absolute -inset-px bg-gradient-to-br from-blue-500/20 via-violet-500/20 to-fuchsia-500/20 rounded-2xl blur opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+          <div class="relative h-full rounded-2xl bg-black/50 backdrop-blur-xl border border-white/10 p-6 space-y-4">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500/30 to-violet-500/30 border border-white/10 grid place-items-center text-blue-300 text-lg">🧮</div>
             <div>
-              <h3 class="text-base font-semibold text-white">Your debts</h3>
-              <p class="text-xs text-slate-500 mt-0.5">Add every loan, card, or balance you're paying down.</p>
+              <h3 class="font-semibold text-white text-sm uppercase tracking-wider">01 / Enter Your Debts</h3>
+              <p class="text-white/60 text-sm leading-relaxed mt-2">Add every debt you carry — balance, APR, minimum payment. Nothing leaves your browser. We need exact numbers because the math compounds.</p>
             </div>
-            <button type="button" id="add-debt" class="text-sm font-medium text-indigo-300 hover:text-indigo-200 flex items-center gap-1.5">
-              <span class="w-5 h-5 rounded-md bg-indigo-500/15 grid place-items-center text-base leading-none">+</span>
-              Add debt
-            </button>
           </div>
-          <div id="debt-list" class="space-y-3"></div>
+        </div>
+        <div data-reveal class="relative group">
+          <div class="absolute -inset-px bg-gradient-to-br from-blue-500/20 via-violet-500/20 to-fuchsia-500/20 rounded-2xl blur opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+          <div class="relative h-full rounded-2xl bg-black/50 backdrop-blur-xl border border-white/10 p-6 space-y-4">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500/30 to-violet-500/30 border border-white/10 grid place-items-center text-blue-300 text-lg">🧠</div>
+            <div>
+              <h3 class="font-semibold text-white text-sm uppercase tracking-wider">02 / We Simulate</h3>
+              <p class="text-white/60 text-sm leading-relaxed mt-2">A month-by-month simulation of both Avalanche and Snowball, then Llama 3.3 70B (via Groq) layers on personalised advice. You see exact dollar savings and months shaved off.</p>
+            </div>
+          </div>
+        </div>
+        <div data-reveal class="relative group">
+          <div class="absolute -inset-px bg-gradient-to-br from-blue-500/20 via-violet-500/20 to-fuchsia-500/20 rounded-2xl blur opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+          <div class="relative h-full rounded-2xl bg-black/50 backdrop-blur-xl border border-white/10 p-6 space-y-4">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500/30 to-violet-500/30 border border-white/10 grid place-items-center text-blue-300 text-lg">📞</div>
+            <div>
+              <h3 class="font-semibold text-white text-sm uppercase tracking-wider">03 / Negotiate the Rest</h3>
+              <p class="text-white/60 text-sm leading-relaxed mt-2">For each debt, generate a phone-ready script: opening, hardship statement, initial offer, counter responses, closing. Read it aloud, settle for less.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ ANALYZE FORM (DebtForm) ============ -->
+  <section id="analyze" class="relative py-28 px-4 overflow-hidden">
+    <div class="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent pointer-events-none"></div>
+    <div class="relative max-w-3xl mx-auto">
+      <div data-reveal class="text-center mb-14">
+        <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/5 border border-white/10 backdrop-blur-md mb-6">
+          <span class="relative flex h-2 w-2">
+            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+            <span class="relative inline-flex rounded-full h-2 w-2 bg-blue-400"></span>
+          </span>
+          <span class="text-xs text-white/70">Step 1 of 2</span>
+        </div>
+        <h2 class="text-5xl md:text-6xl font-bold mb-4 leading-[1.05]">
+          <span class="gradient-text">Enter Your</span><br />
+          <span class="gradient-text-2">Numbers.</span>
+        </h2>
+        <p class="text-white/60 text-lg max-w-md mx-auto">Exact figures give you exact results. Nothing leaves your browser.</p>
+        <button type="button" id="load-sample" class="mt-6 inline-flex items-center gap-2 px-5 py-2 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 text-sm text-white/80 hover:text-white transition-all">
+          <span class="text-amber-300">✦</span> Try with sample data
+        </button>
+      </div>
+
+      <form id="debt-form" class="space-y-6">
+        <!-- Income card -->
+        <div class="relative group">
+          <div class="absolute -inset-px bg-gradient-to-r from-blue-500/20 via-violet-500/20 to-cyan-500/20 rounded-2xl blur opacity-50 group-hover:opacity-100 transition-opacity"></div>
+          <div class="relative rounded-2xl bg-black/60 backdrop-blur-xl border border-white/10 p-6">
+            <div class="flex items-center gap-2 mb-5">
+              <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500/30 to-violet-500/30 border border-white/10 grid place-items-center text-blue-300">👛</div>
+              <h3 class="font-semibold text-white">Monthly Finances</h3>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div class="space-y-2">
+                <label class="text-xs uppercase tracking-wider text-white/50">Monthly Income</label>
+                <div class="relative">
+                  <span class="absolute left-3 top-1/2 -translate-y-1/2 text-white/40 text-sm">$</span>
+                  <input type="number" name="monthly_income" step="any" min="1" placeholder="5,000" required class="input-base w-full pl-8 pr-4 h-12 rounded-xl text-base font-medium" />
+                </div>
+              </div>
+              <div class="space-y-2">
+                <label class="text-xs uppercase tracking-wider text-white/50">Extra Monthly Payment</label>
+                <div class="relative">
+                  <span class="absolute left-3 top-1/2 -translate-y-1/2 text-white/40 text-sm">$</span>
+                  <input type="number" name="extra_payment" step="any" min="0" placeholder="200" required class="input-base w-full pl-8 pr-4 h-12 rounded-xl text-base font-medium" />
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <div id="form-error" class="hidden text-sm text-rose-300 bg-rose-500/10 border border-rose-500/20 rounded-lg px-4 py-3"></div>
-
-        <div class="pt-2">
-          <button type="submit" id="submit-btn" class="btn-primary w-full md:w-auto md:px-12 py-3.5 rounded-xl text-white font-semibold shadow-glow flex items-center justify-center gap-2.5">
-            <span class="spinner hidden" id="submit-spinner"></span>
-            <span id="submit-label">Analyze My Debt</span>
+        <!-- Debts header -->
+        <div class="flex items-center justify-between pt-4">
+          <div class="flex items-center gap-2">
+            <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500/30 to-fuchsia-500/30 border border-white/10 grid place-items-center text-violet-300">💳</div>
+            <h3 class="font-semibold text-white">Your Debts</h3>
+            <span id="debt-count" class="text-xs text-white/50 px-2 py-0.5 rounded-full bg-white/5 border border-white/10">1</span>
+          </div>
+          <button type="button" id="add-debt" class="inline-flex items-center gap-1.5 bg-white/5 hover:bg-white/10 border border-white/10 text-white text-sm font-medium h-9 px-3 rounded-lg transition">
+            <span class="text-base leading-none">+</span> Add Debt
           </button>
-          <p id="submit-status" class="hidden text-sm text-slate-400 mt-3"></p>
         </div>
+
+        <!-- Debt cards -->
+        <div id="debt-list" class="space-y-6"></div>
+
+        <div id="form-error" class="hidden text-sm text-rose-300 bg-rose-500/10 border border-rose-500/20 rounded-xl px-4 py-3"></div>
+
+        <!-- Submit -->
+        <div class="relative group pt-4 flex justify-center">
+          <div class="absolute -inset-2 bg-gradient-to-r from-blue-400/40 via-violet-400/40 to-fuchsia-400/40 rounded-full blur-2xl opacity-60 group-hover:opacity-100 transition-opacity duration-500"></div>
+          <button type="submit" id="submit-btn" class="relative px-10 py-4 btn-white rounded-full font-semibold text-base inline-flex items-center justify-center gap-2">
+            <span id="submit-label">Run Analysis</span>
+            <span id="submit-arrow">→</span>
+          </button>
+        </div>
+        <p class="text-center text-xs text-white/40 pt-2">Your data never leaves your browser. No accounts, no tracking.</p>
       </form>
     </div>
   </section>
 
-  <!-- RESULTS -->
-  <section id="results" hidden class="py-20 border-t border-white/5">
-    <div class="max-w-6xl mx-auto px-6">
-
-      <!-- Headline result -->
-      <div data-result class="fade-init text-center mb-14">
-        <div class="text-xs uppercase tracking-widest text-indigo-300 font-semibold mb-3">Your analysis is ready</div>
-        <h2 class="text-3xl md:text-5xl font-bold tracking-tight mb-3">
-          You could save <span id="r-saved" class="gradient-text">$0</span>
-        </h2>
-        <p class="text-slate-400 text-lg" id="r-saved-sub">Choosing the right payoff strategy.</p>
-      </div>
-
-      <!-- Top stats grid -->
-      <div class="grid md:grid-cols-3 gap-5 mb-10">
-        <!-- Stress score -->
-        <div data-result class="fade-init glass rounded-2xl p-6 flex items-center gap-5">
-          <div class="relative w-24 h-24 shrink-0">
-            <svg viewBox="0 0 100 100" class="stress-ring w-full h-full">
-              <circle cx="50" cy="50" r="42" stroke="rgba(148,163,184,0.12)" stroke-width="8" fill="none" />
-              <circle id="stress-circle" cx="50" cy="50" r="42" stroke="#f97316" stroke-width="8" fill="none"
-                      stroke-linecap="round" stroke-dasharray="263.89" stroke-dashoffset="263.89" />
-            </svg>
-            <div id="stress-value" class="absolute inset-0 grid place-items-center text-2xl font-bold text-white">0</div>
-          </div>
-          <div>
-            <div class="text-xs uppercase tracking-wider text-slate-500 font-semibold mb-1">Financial Stress Score</div>
-            <div id="stress-label" class="text-base font-semibold text-white">—</div>
-            <div class="text-xs text-slate-400 mt-1">Lower is healthier (0–100).</div>
-          </div>
-        </div>
-
-        <!-- Total debt -->
-        <div data-result class="fade-init glass rounded-2xl p-6">
-          <div class="text-xs uppercase tracking-wider text-slate-500 font-semibold mb-2">Total debt</div>
-          <div id="r-total-debt" class="text-3xl font-bold text-white">$0</div>
-          <div id="r-debt-meta" class="text-xs text-slate-400 mt-1.5">across 0 balances</div>
-        </div>
-
-        <!-- Weighted rate -->
-        <div data-result class="fade-init glass rounded-2xl p-6">
-          <div class="text-xs uppercase tracking-wider text-slate-500 font-semibold mb-2">Weighted avg rate</div>
-          <div id="r-weighted-rate" class="text-3xl font-bold text-white">0%</div>
-          <div class="text-xs text-slate-400 mt-1.5">balance-weighted across all debts</div>
-        </div>
-      </div>
-
-      <!-- Strategy comparison -->
-      <div class="grid md:grid-cols-2 gap-5 mb-10">
-        <div data-result class="fade-init glass rounded-2xl p-6 md:p-7" id="card-avalanche">
-          <div class="flex items-center justify-between mb-5">
-            <div class="flex items-center gap-2.5">
-              <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-500 grid place-items-center text-white font-bold">⛰️</div>
-              <div>
-                <div class="text-base font-semibold text-white">Avalanche</div>
-                <div class="text-xs text-slate-500">Highest interest rate first</div>
-              </div>
-            </div>
-            <span id="badge-avalanche" class="hidden text-xs font-semibold uppercase tracking-wider text-emerald-300 bg-emerald-500/15 border border-emerald-400/30 rounded-full px-2.5 py-1">Recommended</span>
-          </div>
-          <div class="space-y-4">
-            <div>
-              <div class="text-xs uppercase tracking-wider text-slate-500 font-semibold mb-1">Months to debt-free</div>
-              <div class="text-3xl font-bold text-white" id="ava-months">—</div>
-            </div>
-            <div>
-              <div class="text-xs uppercase tracking-wider text-slate-500 font-semibold mb-1">Total interest paid</div>
-              <div class="text-3xl font-bold text-white" id="ava-interest">—</div>
-            </div>
-            <div class="pt-3 border-t border-white/5">
-              <div class="text-xs text-slate-500 mb-1.5">Payoff order</div>
-              <div id="ava-order" class="text-xs text-slate-300 font-mono leading-relaxed">—</div>
-            </div>
-          </div>
-        </div>
-
-        <div data-result class="fade-init glass rounded-2xl p-6 md:p-7" id="card-snowball">
-          <div class="flex items-center justify-between mb-5">
-            <div class="flex items-center gap-2.5">
-              <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-sky-500 to-indigo-500 grid place-items-center text-white font-bold">❄️</div>
-              <div>
-                <div class="text-base font-semibold text-white">Snowball</div>
-                <div class="text-xs text-slate-500">Lowest balance first</div>
-              </div>
-            </div>
-            <span id="badge-snowball" class="hidden text-xs font-semibold uppercase tracking-wider text-emerald-300 bg-emerald-500/15 border border-emerald-400/30 rounded-full px-2.5 py-1">Recommended</span>
-          </div>
-          <div class="space-y-4">
-            <div>
-              <div class="text-xs uppercase tracking-wider text-slate-500 font-semibold mb-1">Months to debt-free</div>
-              <div class="text-3xl font-bold text-white" id="sno-months">—</div>
-            </div>
-            <div>
-              <div class="text-xs uppercase tracking-wider text-slate-500 font-semibold mb-1">Total interest paid</div>
-              <div class="text-3xl font-bold text-white" id="sno-interest">—</div>
-            </div>
-            <div class="pt-3 border-t border-white/5">
-              <div class="text-xs text-slate-500 mb-1.5">Payoff order</div>
-              <div id="sno-order" class="text-xs text-slate-300 font-mono leading-relaxed">—</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Charts -->
-      <div class="grid md:grid-cols-5 gap-5 mb-10">
-        <div data-result class="fade-init glass rounded-2xl p-6 md:col-span-2">
-          <div class="text-base font-semibold text-white mb-1">Debt breakdown</div>
-          <div class="text-xs text-slate-500 mb-5">Where your balance sits today.</div>
-          <div class="relative h-72"><canvas id="chart-donut"></canvas></div>
-        </div>
-        <div data-result class="fade-init glass rounded-2xl p-6 md:col-span-3">
-          <div class="flex items-end justify-between mb-1">
-            <div>
-              <div class="text-base font-semibold text-white">Payoff trajectory</div>
-              <div class="text-xs text-slate-500">Total balance, month-by-month.</div>
-            </div>
-            <div class="flex items-center gap-3 text-xs">
-              <span class="flex items-center gap-1.5 text-slate-300"><span class="w-3 h-0.5 bg-emerald-400 rounded-full"></span>Avalanche</span>
-              <span class="flex items-center gap-1.5 text-slate-300"><span class="w-3 h-0.5 bg-indigo-400 rounded-full"></span>Snowball</span>
-            </div>
-          </div>
-          <div class="relative h-72 mt-4"><canvas id="chart-line"></canvas></div>
-        </div>
-      </div>
-
-      <!-- Negotiate Mode -->
-      <div data-result class="fade-init mb-10">
-        <div class="flex items-end justify-between mb-5 flex-wrap gap-3">
-          <div>
-            <div class="flex items-center gap-2 mb-1">
-              <span class="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-orange-300 bg-orange-500/10 border border-orange-400/25 rounded-full px-2.5 py-1">
-                <span class="w-1.5 h-1.5 rounded-full bg-orange-400"></span>
-                Negotiate Mode
-              </span>
-            </div>
-            <h3 class="text-2xl font-bold text-white tracking-tight">Settle your debts for less</h3>
-            <p class="text-sm text-slate-400 mt-1 max-w-2xl">Creditors regularly accept 40–60% of credit card balances. Pick a debt — Claude will analyse your leverage and write a phone-call script using your real numbers.</p>
-          </div>
-        </div>
-        <div id="debt-cards" class="grid md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
-      </div>
-
-      <!-- AI Analysis -->
-      <div data-result class="fade-init glass rounded-2xl p-7 md:p-9">
-        <div class="flex items-center justify-between flex-wrap gap-3 mb-6">
-          <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-400 via-fuchsia-500 to-indigo-500 grid place-items-center text-white font-bold">✦</div>
-            <div>
-              <div class="text-base font-semibold text-white">Personalized advice from Claude</div>
-              <div id="ai-source-label" class="text-xs text-slate-500">Anthropic Claude Sonnet 4.6</div>
-            </div>
-          </div>
-        </div>
-        <div id="ai-analysis" class="prose-invert text-slate-200 leading-relaxed space-y-4 text-[15px]"></div>
-      </div>
-
-      <div class="text-center mt-12">
-        <button id="reset-btn" class="text-sm font-medium text-slate-400 hover:text-white transition">← Run another analysis</button>
-      </div>
-
-    </div>
+  <!-- ============ RESULTS (built dynamically) ============ -->
+  <section id="results" hidden class="relative py-16 px-4">
+    <div id="dash" class="max-w-5xl mx-auto"></div>
   </section>
 
-  <!-- NEGOTIATE MODAL -->
-  <div id="negotiate-modal" hidden class="fixed inset-0 z-[100] flex items-start justify-center p-4 md:p-8 overflow-y-auto" data-lenis-prevent>
-    <div id="modal-backdrop" class="fixed inset-0 bg-black/70 backdrop-blur-sm"></div>
-    <div class="relative w-full max-w-3xl my-8">
-      <div id="modal-card" class="relative w-full glass rounded-2xl p-6 md:p-8" style="opacity:0; transform: translateY(24px) scale(0.98);">
-        <button id="modal-close" class="absolute top-4 right-4 w-9 h-9 rounded-lg grid place-items-center text-slate-400 hover:text-white hover:bg-white/5 transition" aria-label="Close">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
-        </button>
-
-        <div class="flex items-center gap-3 mb-1 pr-12">
-          <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-400 via-rose-500 to-fuchsia-500 grid place-items-center text-white">💬</div>
-          <div>
-            <div class="text-xs uppercase tracking-widest text-orange-300 font-bold">Negotiation strategy</div>
-            <div id="modal-debt-name" class="text-xl font-bold text-white">—</div>
-          </div>
-        </div>
-        <div id="modal-debt-meta" class="text-xs text-slate-400 mb-6 ml-[52px]">—</div>
-
-        <!-- Loading state -->
-        <div id="modal-loading" class="py-16 text-center">
-          <div class="inline-flex items-center gap-3 text-slate-300">
-            <span class="spinner"></span>
-            <span class="text-sm font-medium">Analyzing leverage and generating script…</span>
-          </div>
-          <div class="text-xs text-slate-500 mt-3">Claude Sonnet 4.6 is writing your call script.</div>
-        </div>
-
-        <!-- Error state -->
-        <div id="modal-error" hidden class="py-10 text-center">
-          <div class="text-rose-300 text-sm font-medium" id="modal-error-msg">Something went wrong.</div>
-          <button id="modal-retry" class="mt-4 text-sm font-medium text-indigo-300 hover:text-indigo-200">Try again</button>
-        </div>
-
-        <!-- Content -->
-        <div id="modal-content" hidden class="space-y-7">
-          <!-- Leverage block -->
-          <div>
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <div class="glass rounded-xl p-4">
-                <div class="text-[10px] uppercase tracking-wider text-slate-500 font-semibold mb-1">Debt type</div>
-                <div id="lv-type" class="text-base font-semibold text-white">—</div>
-              </div>
-              <div class="glass rounded-xl p-4">
-                <div class="text-[10px] uppercase tracking-wider text-slate-500 font-semibold mb-1">Leverage</div>
-                <div class="flex items-baseline gap-1.5">
-                  <span id="lv-score" class="text-2xl font-bold text-white">0</span>
-                  <span class="text-xs text-slate-500 font-mono">/100</span>
-                </div>
-                <div class="mt-1.5 h-1.5 bg-white/5 rounded-full overflow-hidden">
-                  <div id="lv-bar" class="h-full bg-gradient-to-r from-orange-400 to-fuchsia-500 transition-all duration-700" style="width:0%"></div>
-                </div>
-              </div>
-              <div class="glass rounded-xl p-4">
-                <div class="text-[10px] uppercase tracking-wider text-slate-500 font-semibold mb-1">Settlement range</div>
-                <div id="lv-range" class="text-base font-semibold text-white">—</div>
-                <div class="text-[11px] text-slate-500 mt-0.5">Target: <span id="lv-target">—</span></div>
-              </div>
-              <div class="glass rounded-xl p-4">
-                <div class="text-[10px] uppercase tracking-wider text-slate-500 font-semibold mb-1">You'd save</div>
-                <div id="lv-saved" class="text-2xl font-bold gradient-text">$0</div>
-                <div id="lv-saved-pct" class="text-[11px] text-slate-500 mt-0.5">— of balance</div>
-              </div>
-            </div>
-
-            <div id="lv-factors" class="flex flex-wrap gap-1.5 mt-4"></div>
-            <div id="lv-notes" class="hidden mt-3 text-xs text-amber-300/90 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2"></div>
-          </div>
-
-          <!-- Settlement scenarios -->
-          <div>
-            <div class="text-xs uppercase tracking-wider text-slate-500 font-bold mb-3">Possible outcomes</div>
-            <div class="grid grid-cols-3 gap-3">
-              <div class="glass rounded-xl p-4">
-                <div class="text-[11px] text-emerald-300 font-semibold uppercase tracking-wider">Best case</div>
-                <div id="sc-best-amount" class="text-lg font-bold text-white mt-1.5">—</div>
-                <div id="sc-best-saved" class="text-[11px] text-emerald-300 mt-0.5">—</div>
-              </div>
-              <div class="glass rounded-xl p-4 ring-1 ring-fuchsia-400/30 bg-fuchsia-500/5">
-                <div class="text-[11px] text-fuchsia-300 font-semibold uppercase tracking-wider">Target</div>
-                <div id="sc-target-amount" class="text-lg font-bold text-white mt-1.5">—</div>
-                <div id="sc-target-saved" class="text-[11px] text-fuchsia-300 mt-0.5">—</div>
-              </div>
-              <div class="glass rounded-xl p-4">
-                <div class="text-[11px] text-slate-400 font-semibold uppercase tracking-wider">Worst case</div>
-                <div id="sc-worst-amount" class="text-lg font-bold text-white mt-1.5">—</div>
-                <div id="sc-worst-saved" class="text-[11px] text-slate-400 mt-0.5">—</div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Script -->
-          <div>
-            <div class="flex items-center justify-between mb-3">
-              <div>
-                <div class="text-xs uppercase tracking-wider text-slate-500 font-bold">Your call script</div>
-                <div id="script-source-label" class="text-[11px] text-slate-500 mt-0.5">—</div>
-              </div>
-              <button id="copy-script" class="text-xs font-semibold px-3 py-1.5 rounded-lg border border-white/10 text-slate-200 hover:bg-white/5 transition flex items-center gap-1.5">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-                <span id="copy-label">Copy</span>
-              </button>
-            </div>
-            <div id="script-sections" class="space-y-4"></div>
-          </div>
-
-          <div class="pt-4 border-t border-white/5 text-[11px] text-slate-500 leading-relaxed">
-            Settlement ranges reflect typical creditor behaviour for unsecured consumer debt. Actual outcomes depend on account age, delinquency status, and the specific creditor. Always get any agreement in writing before sending payment.
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- FOOTER -->
-  <footer class="py-12 border-t border-white/5 mt-12">
-    <div class="max-w-6xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-slate-500">
+  <!-- ============ FOOTER ============ -->
+  <footer class="relative py-12 border-t border-white/5 mt-12">
+    <div class="max-w-6xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-white/50">
       <div class="flex items-center gap-2">
-        <div class="w-6 h-6 rounded-md bg-gradient-to-br from-indigo-500 to-fuchsia-500"></div>
-        <span>DebtClear · Built for the Nexora Innovation Summit 2026</span>
+        <div class="w-6 h-6 rounded-md bg-gradient-to-br from-blue-500 to-violet-500"></div>
+        <span>DebtClear · Pay off debt smarter</span>
       </div>
       <div class="flex items-center gap-6">
-        <span>Django · DRF · AWS Bedrock · Claude Sonnet 4.6</span>
+        <span>Python · Django · DRF · Groq Llama 3.3 70B</span>
       </div>
     </div>
   </footer>
 
+  <!-- ============ LOADING OVERLAY (analyze) ============ -->
+  <div id="loading-overlay" hidden class="fixed inset-0 z-[80] flex items-center justify-center bg-black/80 backdrop-blur-sm">
+    <div class="flex flex-col items-center gap-6 p-8 max-w-sm w-full mx-4">
+      <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500/20 to-violet-500/20 border border-white/10 grid place-items-center">
+        <span class="spinner spinner-blue" style="width:32px;height:32px;border-width:3px"></span>
+      </div>
+      <div id="loading-steps" class="w-full space-y-3"></div>
+    </div>
+  </div>
+
+  <!-- ============ NEGOTIATE MODAL ============ -->
+  <div id="negotiate-modal" hidden class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div id="neg-card" class="relative w-full sm:max-w-3xl max-h-[95vh] sm:max-h-[85vh] bg-ink-900 border border-white/10 rounded-t-2xl sm:rounded-2xl overflow-hidden flex flex-col">
+      <div class="flex items-center justify-between p-5 border-b border-white/10 shrink-0">
+        <div>
+          <h2 id="neg-name" class="font-bold text-lg text-white">—</h2>
+          <p id="neg-meta" class="text-sm text-white/60">—</p>
+        </div>
+        <button data-neg-close class="text-white/60 hover:text-white transition p-1" aria-label="Close">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </div>
+      <div id="neg-body" class="overflow-y-auto flex-1"></div>
+    </div>
+  </div>
+
+  <!-- ============ ROLEPLAY MODAL ============ -->
+  <div id="roleplay-modal" hidden class="fixed inset-0 z-[60] bg-black/80 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="relative w-full sm:max-w-2xl max-h-[95vh] sm:max-h-[90vh] bg-gradient-to-b from-zinc-950 to-zinc-900 border border-white/10 rounded-t-2xl sm:rounded-2xl overflow-hidden flex flex-col">
+      <div class="flex items-center justify-between p-5 border-b border-white/10 shrink-0">
+        <div class="flex items-center gap-3">
+          <div class="w-11 h-11 rounded-full bg-gradient-to-br from-emerald-400 to-blue-500 grid place-items-center text-white font-bold text-base shrink-0">S</div>
+          <div>
+            <h2 class="font-bold text-base text-white">Sarah Mitchell</h2>
+            <p id="rp-sub" class="text-xs text-zinc-400">Collections</p>
+          </div>
+        </div>
+        <button data-rp-close class="text-zinc-400 hover:text-white transition p-1" aria-label="Close">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </div>
+      <div class="px-5 py-2 bg-black/40 border-b border-white/5 flex items-center justify-between text-xs shrink-0">
+        <div id="rp-status" class="flex items-center gap-2"><span class="text-zinc-500">Ready to call</span></div>
+        <div id="rp-activity" class="flex items-center gap-2 text-zinc-500"></div>
+      </div>
+      <div id="rp-convo" class="overflow-y-auto flex-1 p-5 space-y-3"></div>
+      <div id="rp-controls" class="border-t border-white/10 bg-black/40 shrink-0"></div>
+    </div>
+  </div>
+
+  <!-- ============ SETTLEMENT LETTER MODAL ============ -->
+  <div id="letter-modal" hidden class="fixed inset-0 z-[60] bg-black/80 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="relative w-full sm:max-w-3xl max-h-[95vh] sm:max-h-[90vh] bg-ink-900 border border-white/10 rounded-t-2xl sm:rounded-2xl overflow-hidden flex flex-col">
+      <div class="flex items-center justify-between p-5 border-b border-white/10 shrink-0">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-blue-500/15 border border-blue-400/30 grid place-items-center text-blue-300">📄</div>
+          <div>
+            <h2 class="font-bold text-base text-white">Settlement Letter</h2>
+            <p id="lt-sub" class="text-xs text-white/60">—</p>
+          </div>
+        </div>
+        <button data-lt-close class="text-white/60 hover:text-white transition p-1" aria-label="Close">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </div>
+      <div id="lt-body" class="overflow-y-auto flex-1 p-5"></div>
+      <div id="lt-actions" class="border-t border-white/10 p-4 bg-black/40 shrink-0" hidden></div>
+    </div>
+  </div>
+
+  <!-- ============ TOASTS ============ -->
+  <div id="toast-host" class="fixed top-20 right-4 z-[200] flex flex-col gap-2 pointer-events-none"></div>
+
   <script>
-    // ----- Smooth scroll -----
-    const lenis = new Lenis({ smoothWheel: true, lerp: 0.09 });
-    function raf(t) { lenis.raf(t); requestAnimationFrame(raf); }
-    requestAnimationFrame(raf);
-    document.querySelectorAll('a[href^="#"]').forEach(a => {
-      a.addEventListener('click', e => {
-        const id = a.getAttribute('href');
-        if (id.length > 1) {
-          const el = document.querySelector(id);
-          if (el) { e.preventDefault(); lenis.scrollTo(el, { offset: -72 }); }
-        }
+  "use strict";
+  /* ============================================================
+     DebtClear — single-file vanilla-JS port of the Next.js app.
+     No TypeScript, no build step. Talks to the Django /api/ JSON API.
+     ============================================================ */
+
+  // ---------- tiny helpers ----------
+  const $ = (sel, root = document) => root.querySelector(sel);
+  const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
+  const el = (tag, cls, html) => { const n = document.createElement(tag); if (cls) n.className = cls; if (html != null) n.innerHTML = html; return n; };
+  const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
+
+  const fmtMoney = (n) => new Intl.NumberFormat('en-US', { style:'currency', currency:'USD', maximumFractionDigits:0 }).format(n || 0);
+  const fmtMoney2 = (n) => new Intl.NumberFormat('en-US', { style:'currency', currency:'USD', minimumFractionDigits:2, maximumFractionDigits:2 }).format(n || 0);
+  const fmtInt = (n) => Math.round(n || 0).toLocaleString('en-US');
+  function fmtMonths(m){ if (m < 12) return `${m} mo`; const y=Math.floor(m/12), r=m%12; return r?`${y}y ${r}mo`:`${y}y`; }
+  function fmtYearsMonths(m){ if (m<=0) return '—'; const y=Math.floor(m/12), r=m%12; if(y===0) return `${r} mo`; if(r===0) return `${y} yr${y>1?'s':''}`; return `${y}y ${r}m`; }
+  function monthYear(offset){ const d=new Date(); d.setMonth(d.getMonth()+offset); return d.toLocaleDateString('en-US',{month:'short',year:'numeric'}); }
+  function longDate(){ return new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'}); }
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+  const cap = (s) => s ? s.charAt(0).toUpperCase()+s.slice(1) : s;
+
+  // ---------- toasts (sonner replacement) ----------
+  function toast(msg, kind){
+    const host = $('#toast-host');
+    const colors = { success:'border-emerald-400/40 text-emerald-100', error:'border-rose-400/40 text-rose-100', info:'border-white/15 text-white' };
+    const t = el('div', `pointer-events-auto glass rounded-xl px-4 py-3 text-sm shadow-2xl border ${colors[kind]||colors.info} max-w-xs`);
+    t.textContent = msg;
+    t.style.opacity = '0'; t.style.transform = 'translateX(20px)';
+    host.appendChild(t);
+    requestAnimationFrame(() => { t.style.transition='all .25s ease'; t.style.opacity='1'; t.style.transform='none'; });
+    setTimeout(() => { t.style.opacity='0'; t.style.transform='translateX(20px)'; setTimeout(()=>t.remove(), 250); }, 3200);
+  }
+
+  // ---------- animated number ----------
+  function animateNumber(node, to, opts={}){
+    const { prefix='', suffix='', decimals=0, duration=1100 } = opts;
+    const from = 0; const start = performance.now();
+    function frame(now){
+      const p = Math.min((now-start)/duration, 1);
+      const ease = 1 - Math.pow(1-p, 3);
+      const v = from + (to-from)*ease;
+      node.textContent = prefix + (decimals>0 ? v.toLocaleString('en-US',{minimumFractionDigits:decimals,maximumFractionDigits:decimals}) : Math.round(v).toLocaleString('en-US')) + suffix;
+      if (p<1) requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+  }
+
+  // ---------- API ----------
+  async function api(path, body){
+    const res = await fetch(path, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+    let data = {};
+    try { data = await res.json(); } catch {}
+    if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+    return data;
+  }
+  const aiSourceLabel = (src) => (src && src.startsWith('groq')) ? 'Llama 3.3 70B · Groq' : 'Offline estimate (Groq unavailable)';
+
+  // ============================================================
+  //  Shader background (WebGL2 nebula — ported from ShaderBackground.tsx)
+  // ============================================================
+  (function shader(){
+    const canvas = $('#shader-canvas');
+    const gl = canvas.getContext('webgl2');
+    if (!gl) { document.querySelector('.fixed.inset-0.-z-10').style.background = 'radial-gradient(circle at 50% 0%, #0a1430, #000 70%)'; return; }
+    const frag = `#version 300 es
+precision mediump float; out vec4 O; uniform vec2 resolution; uniform float time;
+#define FC gl_FragCoord.xy
+#define T time
+#define R resolution
+#define MN min(R.x,R.y)
+float rnd(vec2 p){p=fract(p*vec2(12.9898,78.233));p+=dot(p,p+34.56);return fract(p.x*p.y);}
+float noise(in vec2 p){vec2 i=floor(p),f=fract(p),u=f*f*(3.-2.*f);float a=rnd(i),b=rnd(i+vec2(1,0)),c=rnd(i+vec2(0,1)),d=rnd(i+1.);return mix(mix(a,b,u.x),mix(c,d,u.x),u.y);}
+float fbm(vec2 p){float t=.0,a=1.;mat2 m=mat2(1.,-.5,.2,1.2);for(int i=0;i<3;i++){t+=a*noise(p);p*=2.*m;a*=.5;}return t;}
+float clouds(vec2 p){float d=1.,t=.0;for(float i=.0;i<2.;i++){float a=d*fbm(i*10.+p.x*.2+.2*(1.+i)*p.y+d+i*i+p);t=mix(t,d,a);d=a;p*=2./(i+1.);}return t;}
+void main(void){vec2 uv=(FC-.5*R)/MN,st=uv*vec2(2,1);vec3 col=vec3(0);float bg=clouds(vec2(st.x+T*.3,-st.y));uv*=1.-.3*(sin(T*.2)*.5+.5);for(float i=1.;i<8.;i++){uv+=.1*cos(i*vec2(.1+.01*i,.8)+i*i+T*.5+.1*uv.x);vec2 p=uv;float d=length(p);col+=.00125/d*(cos(sin(i)*vec3(3,2,4))+1.);float b=noise(i+p+bg*1.731);col+=.002*b/length(max(p,vec2(b*p.x*.02,p.y)));col=mix(col,vec3(bg*.07,bg*.10,bg*.28),d);}O=vec4(col,1);}`;
+    const isMobile = window.innerWidth < 768 || navigator.maxTouchPoints > 0;
+    const scale = isMobile ? 0.35 : 0.6;
+    const frameMs = isMobile ? 50 : 33;
+    const resize = () => { canvas.width = Math.floor(innerWidth*scale); canvas.height = Math.floor(innerHeight*scale); gl.viewport(0,0,canvas.width,canvas.height); };
+    resize();
+    const compile = (src,type) => { const s=gl.createShader(type); gl.shaderSource(s,src); gl.compileShader(s); return s; };
+    const vs = compile('#version 300 es\nprecision mediump float;\nin vec4 position;\nvoid main(){gl_Position=position;}', gl.VERTEX_SHADER);
+    const fs = compile(frag, gl.FRAGMENT_SHADER);
+    const prog = gl.createProgram(); gl.attachShader(prog,vs); gl.attachShader(prog,fs); gl.linkProgram(prog);
+    const buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,1,-1,-1,1,1,1,-1]), gl.STATIC_DRAW);
+    const pos = gl.getAttribLocation(prog,'position'); gl.enableVertexAttribArray(pos); gl.vertexAttribPointer(pos,2,gl.FLOAT,false,0,0);
+    const uRes = gl.getUniformLocation(prog,'resolution'), uTime = gl.getUniformLocation(prog,'time');
+    let last = 0;
+    function loop(now){ requestAnimationFrame(loop); if (now-last < frameMs) return; last=now; gl.useProgram(prog); gl.uniform2f(uRes,canvas.width,canvas.height); gl.uniform1f(uTime, now*1e-3); gl.drawArrays(gl.TRIANGLE_STRIP,0,4); }
+    requestAnimationFrame(loop);
+    addEventListener('resize', resize);
+  })();
+
+  // ============================================================
+  //  Smooth scroll + reveal
+  // ============================================================
+  const lenis = new Lenis({ smoothWheel:true, lerp:0.09 });
+  (function raf(t){ lenis.raf(t); requestAnimationFrame(raf); })();
+  $$('a[href^="#"]').forEach(a => a.addEventListener('click', e => {
+    const id = a.getAttribute('href');
+    if (id.length > 1){ const t = $(id); if (t){ e.preventDefault(); lenis.scrollTo(t, { offset:-72 }); } }
+  }));
+  if (window.gsap && window.ScrollTrigger){
+    gsap.registerPlugin(ScrollTrigger);
+    $$('[data-reveal]').forEach(node => {
+      gsap.fromTo(node, { opacity:0, y:28 }, {
+        opacity:1, y:0, duration:0.7, ease:'power3.out',
+        scrollTrigger: { trigger:node, start:'top 85%' }
       });
     });
+  }
 
-    // ----- Hero animation -----
-    gsap.set('[data-anim]', { opacity: 0, y: 24 });
-    gsap.to('[data-anim="hero-tag"]',  { opacity: 1, y: 0, duration: 0.6, delay: 0.05, ease: 'power3.out' });
-    gsap.to('[data-anim="hero-h1"]',   { opacity: 1, y: 0, duration: 0.8, delay: 0.15, ease: 'power3.out' });
-    gsap.to('[data-anim="hero-sub"]',  { opacity: 1, y: 0, duration: 0.8, delay: 0.30, ease: 'power3.out' });
-    gsap.to('[data-anim="hero-cta"]',  { opacity: 1, y: 0, duration: 0.6, delay: 0.45, ease: 'power3.out' });
-    gsap.to('[data-anim="hero-stats"]',{ opacity: 1, y: 0, duration: 0.7, delay: 0.6,  ease: 'power3.out' });
+  // ============================================================
+  //  Analyze form (DebtForm)
+  // ============================================================
+  const debtList = $('#debt-list');
+  const form = $('#debt-form');
+  const errorBox = $('#form-error');
+  const countBadge = $('#debt-count');
+  let rowId = 0;
 
-    // ----- Form: dynamic debts -----
-    const debtList = document.getElementById('debt-list');
-    const form = document.getElementById('debt-form');
-    const errorBox = document.getElementById('form-error');
-    let debtId = 0;
+  function updateCount(){ countBadge.textContent = debtList.children.length; }
 
-    function addDebtRow(prefill) {
-      const id = ++debtId;
-      const wrap = document.createElement('div');
-      wrap.className = 'glass rounded-xl p-4 grid grid-cols-1 md:grid-cols-12 gap-3 items-end';
-      wrap.dataset.row = id;
-      wrap.innerHTML = `
-        <div class="md:col-span-4">
-          <label class="block text-[11px] font-medium text-slate-400 mb-1.5 uppercase tracking-wider">Name</label>
-          <input name="name" type="text" required maxlength="40" value="${prefill?.name || ''}" placeholder="Credit Card" class="input-base w-full px-3 py-2.5 rounded-lg text-sm" />
-        </div>
-        <div class="md:col-span-3">
-          <label class="block text-[11px] font-medium text-slate-400 mb-1.5 uppercase tracking-wider">Balance</label>
-          <div class="relative">
-            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 font-mono text-sm">$</span>
-            <input name="balance" type="number" min="1" step="any" required value="${prefill?.balance ?? ''}" class="input-base w-full pl-7 pr-3 py-2.5 rounded-lg text-sm" />
-          </div>
-        </div>
-        <div class="md:col-span-2">
-          <label class="block text-[11px] font-medium text-slate-400 mb-1.5 uppercase tracking-wider">APR</label>
-          <div class="relative">
-            <input name="rate" type="number" min="0" max="100" step="0.01" required value="${prefill?.rate ?? ''}" class="input-base w-full pl-3 pr-7 py-2.5 rounded-lg text-sm" />
-            <span class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 font-mono text-sm">%</span>
-          </div>
-        </div>
-        <div class="md:col-span-2">
-          <label class="block text-[11px] font-medium text-slate-400 mb-1.5 uppercase tracking-wider">Min/mo</label>
-          <div class="relative">
-            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 font-mono text-sm">$</span>
-            <input name="min_payment" type="number" min="1" step="any" required value="${prefill?.min_payment ?? ''}" class="input-base w-full pl-7 pr-3 py-2.5 rounded-lg text-sm" />
-          </div>
-        </div>
-        <div class="md:col-span-1 flex md:justify-end">
-          <button type="button" data-remove class="text-slate-500 hover:text-rose-300 transition w-9 h-9 rounded-lg grid place-items-center border border-white/5 hover:border-rose-400/30" title="Remove">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M10 11v6M14 11v6"/></svg>
+  function addDebtRow(p){
+    const id = ++rowId;
+    const wrap = el('div', 'relative group');
+    wrap.dataset.row = id;
+    wrap.innerHTML = `
+      <div class="absolute -inset-px bg-gradient-to-r from-violet-500/10 via-blue-500/10 to-cyan-500/10 rounded-2xl blur opacity-0 group-hover:opacity-100 transition-opacity"></div>
+      <div class="relative rounded-2xl bg-black/60 backdrop-blur-xl border border-white/10 p-6">
+        <div class="flex items-center justify-between mb-4">
+          <span class="text-xs uppercase tracking-wider text-white/40" data-idx>Debt #${debtList.children.length+1}</span>
+          <button type="button" data-remove class="text-white/40 hover:text-rose-400 transition p-1.5 rounded-lg hover:bg-rose-500/10" title="Remove">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>
           </button>
-        </div>`;
-      wrap.querySelector('[data-remove]').addEventListener('click', () => {
-        if (debtList.children.length === 1) return;
-        gsap.to(wrap, { opacity: 0, height: 0, marginTop: 0, padding: 0, duration: 0.25, onComplete: () => wrap.remove() });
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div class="sm:col-span-3 space-y-2">
+            <label class="text-xs uppercase tracking-wider text-white/50">Name</label>
+            <input name="name" type="text" maxlength="40" placeholder="Chase Sapphire Card" value="${esc(p?.name||'')}" class="input-base w-full h-11 px-3 rounded-xl text-sm" />
+          </div>
+          <div class="space-y-2">
+            <label class="text-xs uppercase tracking-wider text-white/50">Balance ($)</label>
+            <div class="relative"><span class="absolute left-3 top-1/2 -translate-y-1/2 text-white/40 text-sm">$</span>
+              <input name="balance" type="number" step="any" min="1" placeholder="8,500" value="${p?.balance ?? ''}" required class="input-base w-full pl-7 pr-3 h-11 rounded-xl text-sm" /></div>
+          </div>
+          <div class="space-y-2">
+            <label class="text-xs uppercase tracking-wider text-white/50">APR (%)</label>
+            <input name="rate" type="number" step="any" min="0" max="100" placeholder="22.99" value="${p?.rate ?? ''}" required class="input-base w-full h-11 px-3 rounded-xl text-sm" />
+          </div>
+          <div class="space-y-2">
+            <label class="text-xs uppercase tracking-wider text-white/50">Min. Payment ($)</label>
+            <div class="relative"><span class="absolute left-3 top-1/2 -translate-y-1/2 text-white/40 text-sm">$</span>
+              <input name="min_payment" type="number" step="any" min="1" placeholder="200" value="${p?.min_payment ?? ''}" required class="input-base w-full pl-7 pr-3 h-11 rounded-xl text-sm" /></div>
+          </div>
+        </div>
+      </div>`;
+    wrap.querySelector('[data-remove]').addEventListener('click', () => {
+      if (debtList.children.length === 1) { toast('Keep at least one debt.', 'info'); return; }
+      gsap.to(wrap, { opacity:0, x:-20, scale:.95, height:0, marginTop:0, duration:.28, onComplete:()=>{ wrap.remove(); renumber(); } });
+    });
+    debtList.appendChild(wrap);
+    gsap.from(wrap, { opacity:0, y:16, scale:.97, duration:.3, ease:'power2.out' });
+    renumber();
+  }
+  function renumber(){ $$('#debt-list [data-row]').forEach((r,i)=> r.querySelector('[data-idx]').textContent = `Debt #${i+1}`); updateCount(); }
+
+  addDebtRow();
+  $('#add-debt').addEventListener('click', () => { if (debtList.children.length >= 20){ toast('Max 20 debts.', 'info'); return; } addDebtRow(); });
+
+  $('#load-sample').addEventListener('click', () => {
+    form.monthly_income.value = '5800';
+    form.extra_payment.value = '300';
+    debtList.innerHTML = ''; rowId = 0;
+    [ {name:'Chase Sapphire Card', balance:8500, rate:24.99, min_payment:255},
+      {name:'Discover Card', balance:4200, rate:21.5, min_payment:130},
+      {name:'Capital One Quicksilver', balance:2800, rate:19.99, min_payment:90},
+      {name:'Personal Loan (Upstart)', balance:6400, rate:15.5, min_payment:220} ].forEach(addDebtRow);
+    toast('Sample data loaded — click Run Analysis', 'success');
+    lenis.scrollTo('#analyze', { offset:-72 });
+  });
+
+  function showError(msg){ errorBox.textContent = msg; errorBox.classList.remove('hidden'); gsap.from(errorBox, { opacity:0, y:-6, duration:.25 }); }
+  function clearError(){ errorBox.classList.add('hidden'); errorBox.textContent=''; }
+
+  // loading overlay with stepped progress
+  const LOADING_STEPS = ['Running Avalanche simulation…','Running Snowball simulation…','Calculating financial stress score…','Generating AI analysis…'];
+  let loadingTimer = null;
+  function showLoading(){
+    const host = $('#loading-steps'); host.innerHTML = '';
+    LOADING_STEPS.forEach((s,i)=>{
+      host.appendChild(el('div', 'flex items-center gap-3 transition-opacity', `
+        <span data-mark class="h-4 w-4 rounded-full border border-white/20 shrink-0 grid place-items-center"></span>
+        <span data-txt class="text-sm text-white/30">${s}</span>`));
+    });
+    $('#loading-overlay').hidden = false;
+    let step = 0; mark(step);
+    loadingTimer = setInterval(()=>{ step = Math.min(step+1, LOADING_STEPS.length-1); mark(step); }, 900);
+    function mark(active){
+      $$('#loading-steps > div').forEach((row,i)=>{
+        const m = row.querySelector('[data-mark]'), t = row.querySelector('[data-txt]');
+        if (i < active){ m.innerHTML = '<span class="text-emerald-400 text-xs">✓</span>'; m.className='h-4 w-4 rounded-full shrink-0 grid place-items-center'; t.className='text-sm text-white'; }
+        else if (i === active){ m.innerHTML = '<span class="spinner spinner-blue" style="width:14px;height:14px"></span>'; m.className='h-4 w-4 shrink-0 grid place-items-center'; t.className='text-sm text-white'; }
+        else { m.innerHTML=''; m.className='h-4 w-4 rounded-full border border-white/20 shrink-0'; t.className='text-sm text-white/30'; }
       });
-      debtList.appendChild(wrap);
-      gsap.from(wrap, { opacity: 0, y: 12, duration: 0.35, ease: 'power2.out' });
     }
+  }
+  function hideLoading(){ clearInterval(loadingTimer); $('#loading-overlay').hidden = true; }
 
-    // Seed two example debts.
-    addDebtRow({ name: 'Credit Card', balance: 5000, rate: 22.99, min_payment: 100 });
-    addDebtRow({ name: 'Student Loan', balance: 15000, rate: 6.5, min_payment: 200 });
+  const state = { result:null };
 
-    document.getElementById('add-debt').addEventListener('click', () => addDebtRow());
-
-    // ----- Submit -----
-    const submitBtn = document.getElementById('submit-btn');
-    const spinner = document.getElementById('submit-spinner');
-    const submitLabel = document.getElementById('submit-label');
-    const submitStatus = document.getElementById('submit-status');
-    const resultsSection = document.getElementById('results');
-
-    function showError(msg) {
-      errorBox.textContent = msg;
-      errorBox.classList.remove('hidden');
-      gsap.from(errorBox, { opacity: 0, y: -6, duration: 0.25 });
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    clearError();
+    const monthly_income = Number(form.monthly_income.value);
+    const extra_payment = Number(form.extra_payment.value);
+    const debts = $$('#debt-list [data-row]').map(r => ({
+      name: r.querySelector('[name=name]').value.trim() || 'Debt',
+      balance: Number(r.querySelector('[name=balance]').value),
+      rate: Number(r.querySelector('[name=rate]').value),
+      min_payment: Number(r.querySelector('[name=min_payment]').value),
+    }));
+    if (!(monthly_income > 0)) { showError('Enter a monthly income greater than 0.'); return; }
+    for (const d of debts){
+      if (!(d.balance > 0) || !(d.min_payment > 0) || !(d.rate >= 0)) { showError(`Check "${d.name}" — balance, APR and minimum must be positive numbers.`); return; }
     }
-    function clearError() { errorBox.classList.add('hidden'); errorBox.textContent = ''; }
-
-    function fmtMoney(n) {
-      return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n);
+    showLoading();
+    try {
+      const data = await api('/api/analyze/', { monthly_income, extra_payment, debts });
+      state.result = data;
+      renderDashboard(data);
+    } catch (err) {
+      showError(err.message || 'Analysis failed. Try again.');
+    } finally {
+      hideLoading();
     }
-    function fmtMoneyExact(n) {
-      return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n);
+  });
+
+  // ============================================================
+  //  RESULTS DASHBOARD
+  // ============================================================
+  const stressMap = [ {max:30,color:'#22c55e',label:'Healthy'}, {max:55,color:'#eab308',label:'Moderate'}, {max:75,color:'#f97316',label:'Elevated'}, {max:100,color:'#ef4444',label:'Critical'} ];
+  function stressInfo(s){ return stressMap.find(c => s <= c.max) || stressMap[3]; }
+  const DONUT_COLORS = ['#3b82f6','#8b5cf6','#06b6d4','#f59e0b','#10b981','#f43f5e','#a78bfa'];
+
+  let charts = { line:null, donut:null };
+
+  function renderDashboard(d){
+    const isAva = d.recommended_strategy === 'avalanche';
+    const rec = isAva ? d.avalanche : d.snowball;
+    const dash = $('#dash');
+    dash.innerHTML = buildDashboard(d, isAva, rec);
+    $('#results').hidden = false;
+
+    wireDashboard(d, isAva, rec);
+
+    // reveal
+    gsap.set('#dash [data-card]', { opacity:0, y:24 });
+    gsap.to('#dash [data-card]', { opacity:1, y:0, duration:.55, stagger:.07, ease:'power3.out' });
+    setTimeout(() => lenis.scrollTo('#results', { offset:-60 }), 80);
+  }
+
+  function buildDashboard(d, isAva, rec){
+    const baseline = d.minimum_only;
+    const showCompare = !(Math.abs(baseline.months-rec.months) < 1 && Math.abs(baseline.total_interest-rec.total_interest) < 1);
+    return `
+      <!-- Header -->
+      <div data-card class="flex items-center justify-between flex-wrap gap-4 mb-10">
+        <div>
+          <h2 class="text-3xl font-bold">Your Debt Analysis</h2>
+          <p class="text-muted-foreground mt-1">Total debt: <span class="text-white font-semibold">${fmtMoney(d.total_debt)}</span> · ${d.debts.length} account${d.debts.length!==1?'s':''}</p>
+        </div>
+        <div class="flex items-center gap-2 flex-wrap">
+          <button id="pdf-btn" class="inline-flex items-center gap-1.5 text-sm font-medium px-4 py-2 rounded-lg border border-blue-500/40 hover:border-blue-500/60 hover:bg-blue-500/10 text-white transition">⬇ Download plan</button>
+          <button id="new-analysis" class="inline-flex items-center gap-1.5 text-sm font-medium px-4 py-2 rounded-lg border border-white/15 hover:bg-white/5 text-white transition">↻ New Analysis</button>
+        </div>
+      </div>
+
+      <!-- Top stats: stress ring + recommendation -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-10">
+        <div data-card class="glass rounded-2xl p-6 flex items-center justify-center">
+          <div class="flex flex-col items-center gap-4">
+            <div class="relative w-40 h-40">
+              <svg viewBox="0 0 120 120" class="w-full h-full stress-ring">
+                <circle cx="60" cy="60" r="54" fill="none" stroke="hsl(222 47% 11%)" stroke-width="10" />
+                <circle id="stress-arc" cx="60" cy="60" r="54" fill="none" stroke="${stressInfo(d.stress_score).color}" stroke-width="10" stroke-linecap="round" stroke-dasharray="${2*Math.PI*54}" stroke-dashoffset="${2*Math.PI*54}" style="filter:drop-shadow(0 0 8px ${stressInfo(d.stress_score).color}60)"/>
+              </svg>
+              <div class="absolute inset-0 flex flex-col items-center justify-center">
+                <span id="stress-num" class="text-4xl font-bold" style="color:${stressInfo(d.stress_score).color}">0</span>
+                <span class="text-xs text-muted-foreground">/100</span>
+              </div>
+            </div>
+            <div class="text-center">
+              <p class="font-semibold" style="color:${stressInfo(d.stress_score).color}">${stressInfo(d.stress_score).label}</p>
+              <p class="text-xs text-muted-foreground">Financial Stress Score</p>
+            </div>
+          </div>
+        </div>
+
+        <div data-card class="md:col-span-2 glass rounded-2xl p-6 border-2 ${isAva?'border-blue-500/30':'border-violet-500/30'} glow-blue">
+          <div class="flex items-center gap-2 mb-5">
+            <span class="text-xs font-semibold px-2.5 py-1 rounded-full ${isAva?'bg-blue-500/15 text-blue-300 border border-blue-400/30':'bg-violet-500/15 text-violet-300 border border-violet-400/30'}">Recommended</span>
+            <h3 class="text-xl font-bold gradient-text">${isAva?'Avalanche Method':'Snowball Method'}</h3>
+          </div>
+          <div class="grid grid-cols-2 gap-4 mb-5">
+            <div>
+              <p class="text-xs text-muted-foreground mb-1">⏱ Debt Free In</p>
+              <p id="rec-months" class="text-3xl font-bold text-white">0 mo</p>
+            </div>
+            <div>
+              <p class="text-xs text-muted-foreground mb-1">↘ Interest Saved (vs other)</p>
+              <p id="rec-saved" class="text-3xl font-bold gradient-text-green">$0</p>
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div class="rounded-lg bg-white/5 p-3">
+              <p class="text-xs text-muted-foreground mb-1">Avalanche</p>
+              <p class="font-semibold text-sm">${d.avalanche.months} mo · ${fmtMoney(d.avalanche.total_interest)} interest</p>
+            </div>
+            <div class="rounded-lg bg-white/5 p-3">
+              <p class="text-xs text-muted-foreground mb-1">Snowball</p>
+              <p class="font-semibold text-sm">${d.snowball.months} mo · ${fmtMoney(d.snowball.total_interest)} interest</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      ${showCompare ? `
+      <!-- Why your plan matters -->
+      <div data-card class="glass rounded-2xl p-6 border border-violet-500/20 mb-10">
+        <div class="flex items-center gap-2 mb-3">
+          <div class="w-7 h-7 rounded-lg bg-violet-500/15 grid place-items-center text-violet-300 text-sm">⚡</div>
+          <h3 class="text-base font-semibold">Why Your Plan Matters</h3>
+        </div>
+        <p class="text-xs text-muted-foreground leading-relaxed mb-4">Compared to making only the minimum payments — the path most people are on by default.</p>
+        <div class="grid grid-cols-2 gap-3">
+          <div class="rounded-xl bg-rose-500/5 border border-rose-400/20 p-4">
+            <div class="flex items-center gap-2 mb-3"><span class="text-rose-300">☠</span><span class="text-xs uppercase tracking-wider text-rose-200/80 font-semibold">Minimum only</span></div>
+            <div class="text-2xl font-bold text-rose-200">${fmtYearsMonths(baseline.months)}</div>
+            <div class="text-[10px] text-rose-200/60 uppercase tracking-wider mb-2">to debt-free</div>
+            <div class="text-lg font-bold text-rose-300">${fmtMoney(baseline.total_interest)}</div>
+            <div class="text-[10px] text-rose-200/60 uppercase tracking-wider">in interest</div>
+          </div>
+          <div class="rounded-xl bg-emerald-500/5 border border-emerald-400/30 p-4">
+            <div class="flex items-center gap-2 mb-3"><span class="text-emerald-300">⚡</span><span class="text-xs uppercase tracking-wider text-emerald-200/80 font-semibold">Your plan</span></div>
+            <div class="text-2xl font-bold text-emerald-200">${fmtYearsMonths(rec.months)}</div>
+            <div class="text-[10px] text-emerald-200/60 uppercase tracking-wider mb-2">to debt-free</div>
+            <div class="text-lg font-bold gradient-text-green">${fmtMoney(rec.total_interest)}</div>
+            <div class="text-[10px] text-emerald-200/60 uppercase tracking-wider">in interest</div>
+          </div>
+        </div>
+        <div class="rounded-xl bg-gradient-to-r from-emerald-500/10 to-blue-500/10 border border-emerald-400/30 p-4 mt-4 text-sm leading-relaxed">
+          <span class="font-bold text-emerald-300">${fmtMoney(baseline.total_interest - rec.total_interest)}</span> saved${
+            (baseline.months-rec.months) > 0 ? ` and <span class="font-bold text-emerald-300">${fmtYearsMonths(baseline.months-rec.months)}</span> of your life back` : ''
+          }${
+            (rec.total_interest>0 && baseline.total_interest/rec.total_interest > 1.5) ? ` — that's <span class="font-bold text-emerald-300">${(baseline.total_interest/rec.total_interest).toFixed(1)}×</span> less interest paid` : ''
+          }. The plan isn't just better — it's a different financial future.
+        </div>
+      </div>` : ''}
+
+      <!-- What-if + Cost of waiting -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mb-10">
+        <div data-card class="glass rounded-2xl p-6 border border-emerald-500/20">
+          <div class="flex items-center gap-2 mb-4">
+            <div class="w-7 h-7 rounded-lg bg-emerald-500/15 grid place-items-center text-emerald-300 text-sm">🎚</div>
+            <h3 class="text-base font-semibold">What If You Paid More?</h3>
+            <span id="wi-loading" class="ml-auto hidden"><span class="spinner" style="width:14px;height:14px;border-top-color:#34d399;border-color:rgba(52,211,153,.25)"></span></span>
+          </div>
+          <div class="flex items-baseline justify-between mb-2">
+            <span class="text-xs text-muted-foreground">Extra monthly payment</span>
+            <span id="wi-extra" class="text-2xl font-bold gradient-text-green">$0</span>
+          </div>
+          <input id="wi-slider" type="range" class="wi-range w-full" min="0" max="100" step="25" value="0" />
+          <div class="flex justify-between text-[10px] text-white/40 mt-2">
+            <span>$0</span><span id="wi-current" class="text-emerald-300/80"></span><span id="wi-cap"></span>
+          </div>
+          <div class="grid grid-cols-2 gap-3 mt-5">
+            <div class="rounded-xl bg-white/5 p-4">
+              <div class="text-xs text-muted-foreground mb-1.5">📅 Debt-free in</div>
+              <div id="wi-months" class="text-2xl font-bold">0 mo</div>
+              <div id="wi-date" class="text-xs text-muted-foreground/80 mt-0.5"></div>
+              <div id="wi-mdelta" class="text-xs mt-1 font-medium"></div>
+            </div>
+            <div class="rounded-xl bg-white/5 p-4">
+              <div class="text-xs text-muted-foreground mb-1.5">↘ Total interest</div>
+              <div id="wi-interest" class="text-2xl font-bold">$0</div>
+              <div class="text-xs text-muted-foreground/80 mt-0.5">over the lifetime</div>
+              <div id="wi-idelta" class="text-xs mt-1 font-medium"></div>
+            </div>
+          </div>
+          <p class="text-xs text-muted-foreground/80 leading-relaxed mt-4">Drag the slider to see how a different extra payment changes your payoff date and total interest in real time.</p>
+        </div>
+
+        <div data-card class="glass rounded-2xl p-6 border border-amber-500/20">
+          <div class="flex items-center gap-2 mb-4">
+            <div class="w-7 h-7 rounded-lg bg-amber-500/15 grid place-items-center text-amber-300 text-sm">⏳</div>
+            <h3 class="text-base font-semibold">The Cost of Waiting</h3>
+          </div>
+          <p class="text-xs text-muted-foreground leading-relaxed mb-4">Every month you delay, your balances keep compounding at <span class="text-amber-300 font-medium">${d.weighted_avg_rate.toFixed(1)}% weighted APR</span>. Here's what inaction costs.</p>
+          <div class="flex gap-2 mb-4" id="cw-tabs">
+            ${[3,6,12].map(m=>`<button data-cw="${m}" class="flex-1 px-3 py-2 rounded-lg text-xs font-medium transition-all ${m===6?'bg-amber-500/20 border border-amber-400/40 text-amber-200':'bg-white/5 border border-white/10 text-muted-foreground hover:bg-white/10'}">Wait ${m} mo</button>`).join('')}
+          </div>
+          <div class="rounded-xl bg-gradient-to-br from-amber-500/10 to-rose-500/5 border border-amber-400/20 p-5 text-center">
+            <div class="flex items-center justify-center gap-2 mb-2"><span class="text-amber-300">🔥</span><span class="text-xs uppercase tracking-wider text-amber-200/80">Extra interest paid</span></div>
+            <div id="cw-amount" class="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-300 to-rose-300">$0</div>
+            <div id="cw-daily" class="text-xs text-muted-foreground mt-2"></div>
+          </div>
+          <p id="cw-calc" class="text-[11px] text-muted-foreground/70 leading-relaxed mt-3"></p>
+        </div>
+      </div>
+
+      <!-- Milestone timeline -->
+      <div id="milestone-host" data-card class="mb-10"></div>
+
+      <!-- Charts -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mb-10">
+        <div data-card class="glass rounded-2xl p-6">
+          <h3 class="text-base font-semibold mb-4">Payoff Timeline</h3>
+          <div class="relative h-72"><canvas id="chart-line"></canvas></div>
+        </div>
+        <div data-card class="glass rounded-2xl p-6">
+          <h3 class="text-base font-semibold mb-4">Debt Breakdown</h3>
+          <div class="relative h-72"><canvas id="chart-donut"></canvas></div>
+        </div>
+      </div>
+
+      <!-- AI analysis -->
+      <div data-card class="glass rounded-2xl p-6 border border-blue-500/20 mb-10">
+        <div class="flex items-center gap-2 mb-4">
+          <div class="w-7 h-7 rounded-lg bg-blue-500/15 grid place-items-center text-blue-300 text-sm">✦</div>
+          <h3 class="text-base font-semibold">AI Financial Advisor</h3>
+          <span class="ml-auto text-[10px] uppercase tracking-wider text-white/40">${esc(aiSourceLabel(d.ai_source))}</span>
+        </div>
+        <div id="ai-analysis" class="space-y-4 text-sm text-muted-foreground leading-relaxed"></div>
+      </div>
+
+      <!-- Advisor chat -->
+      <div id="chat-host" data-card class="glass rounded-2xl p-6 border border-blue-500/20 mb-10"></div>
+
+      <!-- Crisis resources -->
+      <div id="crisis-host" class="mb-10"></div>
+
+      <!-- Negotiate -->
+      <div data-card>
+        <div class="mb-5">
+          <h3 class="text-xl font-bold">Negotiate Your Debts</h3>
+          <p class="text-muted-foreground text-sm mt-1">Generate a word-for-word phone script to settle each debt for less.</p>
+        </div>
+        <div id="neg-cards" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+      </div>`;
+  }
+
+  function wireDashboard(d, isAva, rec){
+    // Stress ring animation
+    const arc = $('#stress-arc'); const C = 2*Math.PI*54;
+    gsap.fromTo(arc, { strokeDashoffset:C }, { strokeDashoffset: C - (d.stress_score/100)*C, duration:1.2, ease:'power3.out' });
+    animateNumber($('#stress-num'), d.stress_score, { duration:1200 });
+
+    // Recommendation
+    animateNumber($('#rec-months'), rec.months, { suffix:' mo' });
+    animateNumber($('#rec-saved'), Math.max(0, d.interest_saved), { prefix:'$' });
+
+    // Header buttons
+    $('#new-analysis').addEventListener('click', () => { lenis.scrollTo('#analyze', { offset:-72 }); });
+    $('#pdf-btn').addEventListener('click', () => downloadPlanPDF(d));
+
+    // What-if slider
+    wireWhatIf(d, isAva);
+    // Cost of waiting
+    wireCostOfWaiting(d);
+    // Milestone
+    renderMilestones(d, isAva, rec);
+    // Charts
+    renderCharts(d);
+    // AI analysis paragraphs
+    const ai = $('#ai-analysis'); ai.innerHTML = '';
+    (d.ai_analysis||'').split(/\n{2,}/).map(s=>s.trim()).filter(Boolean).forEach((p,i)=>{
+      const node = el('p', '', esc(p)); node.style.opacity='0';
+      ai.appendChild(node);
+      gsap.to(node, { opacity:1, x:0, duration:.5, delay:i*0.1, ease:'power2.out' });
+      gsap.from(node, { x:-8, duration:.5, delay:i*0.1 });
+    });
+    // Advisor chat
+    renderChat(d);
+    // Crisis resources
+    renderCrisis(d);
+    // Negotiate cards
+    renderNegotiateCards(d);
+  }
+
+  // ---------- What-if (uses /api/simulate) ----------
+  function wireWhatIf(d, isAvaInit){
+    const base = d.extra_payment;
+    const sumMin = d.debts.reduce((s,x)=>s+x.min_payment, 0);
+    const capV = Math.round(Math.max(base*4, sumMin*2, base+1000));
+    const slider = $('#wi-slider');
+    slider.min = 0; slider.max = capV; slider.step = 25; slider.value = base;
+    $('#wi-cap').textContent = '$' + fmtInt(capV);
+    $('#wi-current').textContent = 'Current: $' + fmtInt(base);
+
+    let timer = null, reqId = 0;
+    function paint(extra, sim){
+      const isAva = (sim?.recommended_strategy ?? d.recommended_strategy) === 'avalanche';
+      const strat = sim ? (isAva?sim.avalanche:sim.snowball) : (isAva?d.avalanche:d.snowball);
+      const baseStrat = isAva?d.avalanche:d.snowball;
+      $('#wi-extra').textContent = '$' + fmtInt(extra);
+      // gradient fill
+      const pct = (extra/capV)*100;
+      slider.style.background = `linear-gradient(to right, #10b981 0%, #3b82f6 ${pct}%, rgba(255,255,255,0.1) ${pct}%, rgba(255,255,255,0.1) 100%)`;
+      $('#wi-months').textContent = strat.months + ' mo';
+      $('#wi-date').textContent = 'by ' + monthYear(strat.months);
+      $('#wi-interest').textContent = fmtMoney(strat.total_interest);
+      const md = strat.months - baseStrat.months;
+      const idel = strat.total_interest - baseStrat.total_interest;
+      const mEl = $('#wi-mdelta'), iEl = $('#wi-idelta');
+      mEl.textContent = md!==0 ? `${md<0?'−':'+'}${Math.abs(md)} mo vs current` : '';
+      mEl.className = 'text-xs mt-1 font-medium ' + (md<0?'text-emerald-300':md>0?'text-amber-300':'');
+      iEl.textContent = Math.abs(idel)>1 ? `${idel<0?'−':'+'}$${fmtInt(Math.abs(idel))} vs current` : '';
+      iEl.className = 'text-xs mt-1 font-medium ' + (idel<0?'text-emerald-300':idel>0?'text-amber-300':'');
     }
-    function fmtMonths(m) {
-      if (m < 12) return `${m} mo`;
-      const y = Math.floor(m / 12), r = m % 12;
-      return r ? `${y}y ${r}mo` : `${y}y`;
+    paint(base, null);
+
+    slider.addEventListener('input', () => {
+      const extra = Number(slider.value);
+      $('#wi-extra').textContent = '$' + fmtInt(extra);
+      const pct = (extra/capV)*100;
+      slider.style.background = `linear-gradient(to right, #10b981 0%, #3b82f6 ${pct}%, rgba(255,255,255,0.1) ${pct}%, rgba(255,255,255,0.1) 100%)`;
+      if (Math.abs(extra-base) < 0.5){ $('#wi-loading').classList.add('hidden'); paint(extra, null); if(timer) clearTimeout(timer); return; }
+      if (timer) clearTimeout(timer);
+      $('#wi-loading').classList.remove('hidden');
+      timer = setTimeout(async () => {
+        const myId = ++reqId;
+        try {
+          const sim = await api('/api/simulate/', { monthly_income:d.monthly_income, extra_payment:Math.round(extra), debts:d.debts });
+          if (myId === reqId){ paint(extra, sim); $('#wi-loading').classList.add('hidden'); }
+        } catch { if (myId===reqId) $('#wi-loading').classList.add('hidden'); }
+      }, 280);
+    });
+  }
+
+  // ---------- Cost of waiting ----------
+  function wireCostOfWaiting(d){
+    function cost(months){ if (d.total_debt<=0||d.weighted_avg_rate<=0||months<=0) return 0; return d.total_debt*(d.weighted_avg_rate/100/12)*months; }
+    function set(months){
+      $$('#cw-tabs [data-cw]').forEach(b => {
+        const on = Number(b.dataset.cw)===months;
+        b.className = `flex-1 px-3 py-2 rounded-lg text-xs font-medium transition-all ${on?'bg-amber-500/20 border border-amber-400/40 text-amber-200':'bg-white/5 border border-white/10 text-muted-foreground hover:bg-white/10'}`;
+      });
+      const c = cost(months);
+      animateNumber($('#cw-amount'), c, { prefix:'$', duration:600 });
+      $('#cw-daily').innerHTML = `That's roughly <span class="text-amber-200 font-medium">$${(c/(months*30)).toFixed(2)} a day</span> disappearing into interest while you wait.`;
+      $('#cw-calc').textContent = `Calculation: ${fmtMoney(d.total_debt)} × ${d.weighted_avg_rate.toFixed(2)}% APR ÷ 12 × ${months} months. Conservative — assumes you keep making minimums.`;
     }
+    $$('#cw-tabs [data-cw]').forEach(b => b.addEventListener('click', () => set(Number(b.dataset.cw))));
+    set(6);
+  }
 
-    let donutChart = null, lineChart = null;
+  // ---------- Milestone timeline ----------
+  function renderMilestones(d, isAva, rec){
+    const host = $('#milestone-host');
+    const order = rec.payoff_order, months = rec.payoff_months;
+    if (!order || !months || !order.length || order.length !== months.length){ host.remove(); return; }
+    const total = rec.months;
+    const markers = order.map((name,i)=>({ name, month:months[i], isFinal:i===order.length-1, progress:(months[i]/total)*100 }));
+    host.className = 'glass rounded-2xl p-6 border border-emerald-500/20 mb-10';
+    host.innerHTML = `
+      <div class="flex items-center gap-2 mb-3">
+        <div class="w-7 h-7 rounded-lg bg-emerald-500/15 grid place-items-center text-emerald-300 text-sm">🏆</div>
+        <h3 class="text-base font-semibold">Your Victory Timeline</h3>
+      </div>
+      <p class="text-xs text-muted-foreground leading-relaxed mb-6">Each debt eliminated is a permanent raise. Here's when each disappears using the ${isAva?'Avalanche':'Snowball'} method.</p>
+      <div class="relative pt-2 pb-4">
+        <div class="absolute left-0 right-0 top-10 h-1 bg-white/5 rounded-full"></div>
+        <div id="ms-fill" class="absolute left-0 top-10 h-1 bg-gradient-to-r from-emerald-400 via-blue-400 to-violet-400 rounded-full" style="width:0%"></div>
+        <div class="absolute left-0 top-8 -translate-y-1/2 z-10">
+          <div class="w-4 h-4 rounded-full bg-white/30 border-2 border-white/60"></div>
+          <div class="absolute top-7 left-0 -translate-x-1/4 whitespace-nowrap">
+            <div class="text-[9px] uppercase tracking-wider text-white/40">Today</div>
+            <div class="text-[10px] text-white/60 font-medium">${monthYear(0)}</div>
+          </div>
+        </div>
+        <div class="relative h-32">
+          ${markers.map((m,i)=>{
+            const left = clamp(m.progress,2,98);
+            const above = i%2===0;
+            return `<div class="ms-marker absolute top-8 -translate-y-1/2 z-10" style="left:${left}%;opacity:0">
+              <div class="w-5 h-5 rounded-full border-2 grid place-items-center ${m.isFinal?'bg-emerald-400 border-emerald-200':'bg-emerald-500/80 border-emerald-300'}" style="${m.isFinal?'box-shadow:0 0 16px rgba(16,185,129,0.7)':''}">
+                <span class="text-[9px] text-emerald-950">${m.isFinal?'🏆':'🎉'}</span>
+              </div>
+              <div class="absolute left-1/2 -translate-x-1/2 ${above?'-top-16':'top-7'} whitespace-nowrap">
+                <div class="rounded-md px-2 py-1 ${m.isFinal?'bg-emerald-500/20 border border-emerald-400/40':'bg-white/5 border border-white/10'} backdrop-blur-md">
+                  <div class="text-[10px] font-semibold text-white">${m.isFinal?'Debt-free!':esc(m.name)+' 🎉'}</div>
+                  <div class="text-[9px] ${m.isFinal?'text-emerald-200':'text-white/60'}">${monthYear(m.month)} · m${m.month}</div>
+                </div>
+              </div>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>
+      <div class="flex items-center justify-between gap-3 pt-2 border-t border-white/5">
+        <div class="flex items-center gap-2 text-xs text-muted-foreground">🚩 First win in <span class="text-emerald-300 font-semibold">${markers[0].month} mo</span></div>
+        <div class="text-xs text-muted-foreground">All clear by <span class="gradient-text-green font-bold">${monthYear(markers[markers.length-1].month)}</span></div>
+      </div>`;
+    // animate
+    ScrollTrigger.create({ trigger:host, start:'top 80%', once:true, onEnter:()=>{
+      gsap.to('#ms-fill', { width:'100%', duration:1.6, ease:'power2.out' });
+      gsap.to('#milestone-host .ms-marker', { opacity:1, scale:1, duration:.4, stagger:.15, delay:.4, ease:'back.out(2)', from:{scale:.5} });
+    }});
+  }
 
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      clearError();
+  // ---------- Charts (Chart.js) ----------
+  function renderCharts(d){
+    const tooltip = { backgroundColor:'#0a0c14', borderColor:'rgba(148,163,184,0.15)', borderWidth:1, padding:12, titleColor:'#fff', bodyColor:'#cbd5e1' };
+    // Payoff area
+    if (charts.line) charts.line.destroy();
+    const lctx = $('#chart-line');
+    const maxLen = Math.max(d.avalanche.payoff_timeline.length, d.snowball.payoff_timeline.length);
+    const labels = Array.from({length:maxLen}, (_,i)=>i);
+    const grad = (ctx, color) => { const g = ctx.createLinearGradient(0,0,0,288); g.addColorStop(0, color+'4d'); g.addColorStop(1, color+'00'); return g; };
+    charts.line = new Chart(lctx, {
+      type:'line',
+      data:{ labels, datasets:[
+        { label:'Avalanche', data:d.avalanche.payoff_timeline, borderColor:'#3b82f6', backgroundColor:grad(lctx.getContext('2d'),'#3b82f6'), fill:true, tension:0.3, pointRadius:0, borderWidth:2 },
+        { label:'Snowball', data:d.snowball.payoff_timeline, borderColor:'#8b5cf6', backgroundColor:grad(lctx.getContext('2d'),'#8b5cf6'), fill:true, tension:0.3, pointRadius:0, borderWidth:2 },
+      ]},
+      options:{ responsive:true, maintainAspectRatio:false, interaction:{mode:'index',intersect:false},
+        plugins:{ legend:{ labels:{ color:'#94a3b8', usePointStyle:true, font:{family:'Inter',size:12} } },
+          tooltip:{ ...tooltip, callbacks:{ title:(it)=>`Month ${it[0].label}`, label:(c)=>`${c.dataset.label}: ${fmtMoney(c.parsed.y)}` } } },
+        scales:{ x:{ grid:{ color:'rgba(148,163,184,0.08)' }, ticks:{ color:'#64748b', maxTicksLimit:10, callback:(v)=>`M${v}` } },
+          y:{ grid:{ color:'rgba(148,163,184,0.08)' }, ticks:{ color:'#64748b', callback:(v)=> v>=1000?`$${(v/1000).toFixed(0)}k`:`$${v}` } } },
+        animation:{ duration:1000 } },
+    });
+    // Donut
+    if (charts.donut) charts.donut.destroy();
+    const total = d.debts.reduce((s,x)=>s+x.balance,0);
+    charts.donut = new Chart($('#chart-donut'), {
+      type:'doughnut',
+      data:{ labels:d.debts.map(x=>x.name), datasets:[{ data:d.debts.map(x=>x.balance), backgroundColor:d.debts.map((_,i)=>DONUT_COLORS[i%DONUT_COLORS.length]), borderColor:'#0a0c14', borderWidth:3, hoverOffset:8 }] },
+      options:{ responsive:true, maintainAspectRatio:false, cutout:'66%',
+        plugins:{ legend:{ position:'bottom', labels:{ color:'#94a3b8', usePointStyle:true, padding:14, font:{family:'Inter',size:11} } },
+          tooltip:{ ...tooltip, callbacks:{ label:(c)=>`${c.label}: ${fmtMoney(c.parsed)} (${((c.parsed/total)*100).toFixed(0)}%)` } } },
+        animation:{ animateRotate:true, duration:900 } },
+    });
+  }
 
-      const fd = new FormData(form);
-      const monthlyIncome = Number(fd.get('monthly_income'));
-      const extraPayment = Number(fd.get('extra_payment'));
+  // ---------- Advisor chat (uses /api/chat) ----------
+  const CHAT_SUGGESTED = ['What if I lose my job?','Should I refinance my highest-rate card?','What if I get a $5,000 windfall?','Is bankruptcy worth considering?','Should I stop investing to pay debt faster?','How do I free up more cash each month?'];
+  function renderChat(d){
+    const host = $('#chat-host');
+    const snapshot = {
+      monthly_income:d.monthly_income, extra_payment:d.extra_payment, total_debt:d.total_debt,
+      weighted_avg_rate:d.weighted_avg_rate, stress_score:d.stress_score, debts:d.debts,
+      recommended_strategy:d.recommended_strategy,
+      avalanche:{ months:d.avalanche.months, total_interest:d.avalanche.total_interest },
+      snowball:{ months:d.snowball.months, total_interest:d.snowball.total_interest },
+      minimum_only:{ months:d.minimum_only.months, total_interest:d.minimum_only.total_interest },
+    };
+    let history = [];
+    let loading = false;
+    host.innerHTML = `
+      <div class="flex items-center gap-2 mb-4">
+        <div class="w-7 h-7 rounded-lg bg-blue-500/15 grid place-items-center text-blue-300 text-sm">💬</div>
+        <h3 class="text-base font-semibold">Ask Your Advisor</h3>
+        <span class="ml-auto text-[10px] uppercase tracking-wider text-emerald-300/70 flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>Live</span>
+      </div>
+      <div id="chat-intro" class="rounded-xl bg-blue-500/5 border border-blue-500/15 p-4 mb-4">
+        <p class="text-xs text-muted-foreground leading-relaxed mb-3">I have your full financial picture — every debt, your income, your stress score, your plan. Ask a follow-up and I'll answer with <span class="text-white font-medium">your actual numbers</span>.</p>
+        <div class="flex flex-wrap gap-2">${CHAT_SUGGESTED.map(s=>`<button data-q="${esc(s)}" class="text-xs px-3 py-1.5 rounded-full bg-white/5 border border-white/10 hover:border-blue-400/40 hover:bg-blue-500/10 text-muted-foreground hover:text-white transition-all">${esc(s)}</button>`).join('')}</div>
+      </div>
+      <div id="chat-scroll" class="max-h-[420px] overflow-y-auto space-y-3 pr-1 hidden"></div>
+      <form id="chat-form" class="flex items-center gap-2 mt-2">
+        <input id="chat-input" type="text" maxlength="500" placeholder="Ask anything about your plan…" class="flex-1 px-4 py-2.5 rounded-full bg-white/5 border border-white/10 text-sm text-white placeholder:text-white/40 focus:outline-none focus:border-blue-400/50 focus:bg-white/10 transition" />
+        <button id="chat-send" type="submit" class="w-10 h-10 rounded-full bg-blue-500 hover:bg-blue-400 text-white grid place-items-center transition disabled:opacity-30 shrink-0">➤</button>
+      </form>`;
+    const scroll = $('#chat-scroll'), intro = $('#chat-intro'), input = $('#chat-input');
 
-      const rows = [...debtList.querySelectorAll('[data-row]')];
-      const debts = rows.map(r => ({
-        name: r.querySelector('[name=name]').value.trim() || 'Debt',
-        balance: Number(r.querySelector('[name=balance]').value),
-        rate: Number(r.querySelector('[name=rate]').value),
-        min_payment: Number(r.querySelector('[name=min_payment]').value),
-      }));
-
-      if (!debts.length) { showError('Add at least one debt to analyze.'); return; }
-      for (const d of debts) {
-        if (!(d.balance > 0) || !(d.min_payment > 0) || !(d.rate >= 0)) {
-          showError(`Check the values for "${d.name}" — every field must be a positive number.`);
-          return;
-        }
-      }
-
-      submitBtn.disabled = true;
-      spinner.classList.remove('hidden');
-      submitLabel.textContent = 'Analyzing…';
-      submitStatus.classList.remove('hidden');
-      submitStatus.textContent = 'Running simulations and consulting Claude…';
-
+    function bubble(role, content){
+      const wrap = el('div', `flex ${role==='user'?'justify-end':'justify-start'}`);
+      wrap.innerHTML = `<div class="max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${role==='user'?'bg-blue-500/20 border border-blue-400/30 text-white rounded-br-sm':'bg-white/5 border border-white/10 text-muted-foreground rounded-bl-sm'}">
+        ${role==='assistant'?'<div class="flex items-center gap-1.5 mb-1 text-[10px] uppercase tracking-wider text-blue-300/80 font-semibold">✦ Advisor</div>':''}
+        <p class="whitespace-pre-line">${esc(content)}</p></div>`;
+      scroll.appendChild(wrap);
+      gsap.from(wrap, { opacity:0, y:8, duration:.3 });
+      scroll.scrollTop = scroll.scrollHeight;
+    }
+    async function send(q){
+      q = q.trim(); if (!q || loading) return;
+      intro.classList.add('hidden'); scroll.classList.remove('hidden');
+      input.value='';
+      bubble('user', q);
+      history.push({ role:'user', content:q });
+      loading = true;
+      const typing = el('div','flex justify-start');
+      typing.innerHTML = `<div class="bg-white/5 border border-white/10 rounded-2xl rounded-bl-sm px-4 py-3 flex gap-1"><span class="typing-dot"></span><span class="typing-dot" style="animation-delay:.15s"></span><span class="typing-dot" style="animation-delay:.3s"></span></div>`;
+      scroll.appendChild(typing); scroll.scrollTop = scroll.scrollHeight;
       try {
-        const res = await fetch('/api/analyze/', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ monthly_income: monthlyIncome, extra_payment: extraPayment, debts }),
-        });
-        const data = await res.json();
-        if (!res.ok) {
-          showError(data.error || 'Something went wrong analyzing your debts.');
-          return;
-        }
-        renderResults(data);
+        const r = await api('/api/chat/', { snapshot, history: history.slice(0,-1), question:q });
+        typing.remove();
+        bubble('assistant', r.text);
+        history.push({ role:'assistant', content:r.text });
       } catch (err) {
-        console.error(err);
-        showError('Network error reaching the analysis API. Try again.');
-      } finally {
-        submitBtn.disabled = false;
-        spinner.classList.add('hidden');
-        submitLabel.textContent = 'Analyze My Debt';
-        submitStatus.classList.add('hidden');
-      }
-    });
-
-    document.getElementById('reset-btn').addEventListener('click', () => {
-      lenis.scrollTo('#analyze', { offset: -72 });
-    });
-
-    function stressColor(score) {
-      if (score < 35) return { stroke: '#22c55e', label: 'Healthy', text: 'text-emerald-300' };
-      if (score < 60) return { stroke: '#eab308', label: 'Manageable', text: 'text-amber-300' };
-      if (score < 80) return { stroke: '#f97316', label: 'Elevated', text: 'text-orange-300' };
-      return { stroke: '#ef4444', label: 'Critical', text: 'text-rose-300' };
+        typing.remove();
+        history.pop(); input.value = q;
+        toast(err.message || "Couldn't reach advisor", 'error');
+      } finally { loading = false; }
     }
+    $$('#chat-intro [data-q]').forEach(b => b.addEventListener('click', () => send(b.dataset.q)));
+    $('#chat-form').addEventListener('submit', e => { e.preventDefault(); send(input.value); });
+  }
 
-    function renderResults(d) {
-      // Top headline
-      const saved = Math.max(0, d.interest_saved);
-      const savedEl = document.getElementById('r-saved');
-      const subEl = document.getElementById('r-saved-sub');
-      if (saved > 0) {
-        savedEl.textContent = fmtMoneyExact(saved);
-        subEl.textContent = `Plus ${d.months_saved} fewer month${d.months_saved === 1 ? '' : 's'} in debt — by choosing ${d.recommended_strategy.charAt(0).toUpperCase() + d.recommended_strategy.slice(1)}.`;
-      } else {
-        savedEl.textContent = fmtMoneyExact(0);
-        subEl.textContent = `Your debts converge: both strategies cost about the same. ${d.recommended_strategy.charAt(0).toUpperCase() + d.recommended_strategy.slice(1)} edges out by a hair.`;
-      }
-
-      // Stress score ring
-      const sc = stressColor(d.stress_score);
-      const C = 2 * Math.PI * 42;
-      const circle = document.getElementById('stress-circle');
-      circle.setAttribute('stroke', sc.stroke);
-      const offset = C * (1 - d.stress_score / 100);
-      gsap.fromTo(circle, { strokeDashoffset: C }, { strokeDashoffset: offset, duration: 1.1, ease: 'power3.out' });
-      const valEl = document.getElementById('stress-value');
-      const valObj = { v: 0 };
-      gsap.to(valObj, { v: d.stress_score, duration: 1.1, ease: 'power3.out', onUpdate: () => valEl.textContent = Math.round(valObj.v) });
-      const labelEl = document.getElementById('stress-label');
-      labelEl.textContent = sc.label;
-      labelEl.className = `text-base font-semibold ${sc.text}`;
-
-      // Top stats
-      document.getElementById('r-total-debt').textContent = fmtMoneyExact(d.total_debt);
-      document.getElementById('r-debt-meta').textContent = `across ${d.debts.length} balance${d.debts.length === 1 ? '' : 's'} · ${fmtMoneyExact(d.extra_payment)}/mo extra`;
-      document.getElementById('r-weighted-rate').textContent = `${d.weighted_avg_rate.toFixed(2)}%`;
-
-      // Strategy cards
-      document.getElementById('ava-months').textContent = fmtMonths(d.avalanche.months);
-      document.getElementById('ava-interest').textContent = fmtMoneyExact(d.avalanche.total_interest);
-      document.getElementById('ava-order').textContent = d.avalanche.payoff_order.join(' → ') || '—';
-
-      document.getElementById('sno-months').textContent = fmtMonths(d.snowball.months);
-      document.getElementById('sno-interest').textContent = fmtMoneyExact(d.snowball.total_interest);
-      document.getElementById('sno-order').textContent = d.snowball.payoff_order.join(' → ') || '—';
-
-      const avaCard = document.getElementById('card-avalanche');
-      const snoCard = document.getElementById('card-snowball');
-      avaCard.classList.remove('winner-glow');
-      snoCard.classList.remove('winner-glow');
-      document.getElementById('badge-avalanche').classList.add('hidden');
-      document.getElementById('badge-snowball').classList.add('hidden');
-      if (d.recommended_strategy === 'avalanche') {
-        avaCard.classList.add('winner-glow');
-        document.getElementById('badge-avalanche').classList.remove('hidden');
-      } else {
-        snoCard.classList.add('winner-glow');
-        document.getElementById('badge-snowball').classList.remove('hidden');
-      }
-
-      // Donut
-      if (donutChart) donutChart.destroy();
-      const donutCtx = document.getElementById('chart-donut');
-      const palette = ['#818cf8', '#c084fc', '#f472b6', '#fb923c', '#34d399', '#60a5fa', '#facc15', '#f87171'];
-      donutChart = new Chart(donutCtx, {
-        type: 'doughnut',
-        data: {
-          labels: d.debts.map(x => x.name),
-          datasets: [{
-            data: d.debts.map(x => x.balance),
-            backgroundColor: d.debts.map((_, i) => palette[i % palette.length]),
-            borderColor: '#0a0c14',
-            borderWidth: 3,
-            hoverOffset: 8,
-          }],
-        },
-        options: {
-          responsive: true, maintainAspectRatio: false, cutout: '68%',
-          plugins: {
-            legend: { position: 'bottom', labels: { color: '#cbd5e1', usePointStyle: true, padding: 14, font: { family: 'Inter', size: 12 } } },
-            tooltip: {
-              backgroundColor: '#0a0c14', borderColor: 'rgba(148,163,184,0.15)', borderWidth: 1,
-              padding: 12, titleColor: '#fff', bodyColor: '#cbd5e1',
-              callbacks: { label: (ctx) => `${ctx.label}: ${fmtMoneyExact(ctx.parsed)}` },
-            },
-          },
-          animation: { animateRotate: true, duration: 900 },
-        },
-      });
-
-      // Line chart
-      if (lineChart) lineChart.destroy();
-      const lineCtx = document.getElementById('chart-line');
-      const labels = Array.from({ length: Math.max(d.avalanche.payoff_timeline.length, d.snowball.payoff_timeline.length) }, (_, i) => i);
-      lineChart = new Chart(lineCtx, {
-        type: 'line',
-        data: {
-          labels,
-          datasets: [
-            {
-              label: 'Avalanche',
-              data: d.avalanche.payoff_timeline,
-              borderColor: '#34d399',
-              backgroundColor: 'rgba(52, 211, 153, 0.10)',
-              fill: true, tension: 0.25, pointRadius: 0, borderWidth: 2.5,
-            },
-            {
-              label: 'Snowball',
-              data: d.snowball.payoff_timeline,
-              borderColor: '#818cf8',
-              backgroundColor: 'rgba(129, 140, 248, 0.08)',
-              fill: true, tension: 0.25, pointRadius: 0, borderWidth: 2.5, borderDash: [4, 4],
-            },
-          ],
-        },
-        options: {
-          responsive: true, maintainAspectRatio: false,
-          interaction: { mode: 'index', intersect: false },
-          plugins: {
-            legend: { display: false },
-            tooltip: {
-              backgroundColor: '#0a0c14', borderColor: 'rgba(148,163,184,0.15)', borderWidth: 1,
-              padding: 12, titleColor: '#fff', bodyColor: '#cbd5e1',
-              callbacks: {
-                title: (items) => `Month ${items[0].label}`,
-                label: (ctx) => `${ctx.dataset.label}: ${fmtMoneyExact(ctx.parsed.y)}`,
-              },
-            },
-          },
-          scales: {
-            x: { grid: { color: 'rgba(148,163,184,0.06)' }, ticks: { color: '#64748b', maxTicksLimit: 10 }, title: { display: true, text: 'Months', color: '#64748b', font: { size: 11 } } },
-            y: { grid: { color: 'rgba(148,163,184,0.06)' }, ticks: { color: '#64748b', callback: v => fmtMoney(v) } },
-          },
-          animation: { duration: 1000 },
-        },
-      });
-
-      // Negotiate Mode — render per-debt cards
-      renderDebtCards(d);
-
-      // AI text — split into paragraphs.
-      const aiBox = document.getElementById('ai-analysis');
-      aiBox.innerHTML = '';
-      const paragraphs = d.ai_analysis.split(/\n{2,}/).map(p => p.trim()).filter(Boolean);
-      paragraphs.forEach(p => {
-        const el = document.createElement('p');
-        el.textContent = p;
-        aiBox.appendChild(el);
-      });
-      const sourceLabel = document.getElementById('ai-source-label');
-      sourceLabel.textContent = 'Anthropic Claude Sonnet 4.6';
-
-      // Cache the analysis context for negotiate calls.
-      window.__debtClearContext = {
-        monthly_income: d.monthly_income,
-        total_debt: d.total_debt,
-        stress_score: d.stress_score,
-        debt_count: d.debts.length,
-      };
-
-      // Reveal
-      resultsSection.hidden = false;
-      gsap.set('[data-result]', { opacity: 0, y: 24 });
-      gsap.to('[data-result]', { opacity: 1, y: 0, duration: 0.55, stagger: 0.08, ease: 'power3.out' });
-      setTimeout(() => lenis.scrollTo(resultsSection, { offset: -72 }), 80);
-    }
-
-    // ---------- Negotiate Mode ----------
-    const debtCardsEl = document.getElementById('debt-cards');
-    const modal = document.getElementById('negotiate-modal');
-    const modalCard = document.getElementById('modal-card');
-    const modalBackdrop = document.getElementById('modal-backdrop');
-    const modalClose = document.getElementById('modal-close');
-    const modalLoading = document.getElementById('modal-loading');
-    const modalError = document.getElementById('modal-error');
-    const modalErrorMsg = document.getElementById('modal-error-msg');
-    const modalRetry = document.getElementById('modal-retry');
-    const modalContent = document.getElementById('modal-content');
-    const copyBtn = document.getElementById('copy-script');
-    const copyLabel = document.getElementById('copy-label');
-
-    let lastNegotiateDebt = null;
-    let lastScriptText = '';
-
-    function renderDebtCards(d) {
-      debtCardsEl.innerHTML = '';
-      d.debts.forEach(debt => {
-        const card = document.createElement('div');
-        card.className = 'glass rounded-2xl p-5 flex flex-col';
-        card.innerHTML = `
-          <div class="flex items-start justify-between gap-3 mb-3">
-            <div class="min-w-0">
-              <div class="text-[10px] uppercase tracking-wider text-slate-500 font-semibold">${escapeHtml(detectTypeLabel(debt.name))}</div>
-              <div class="text-base font-semibold text-white truncate" title="${escapeHtml(debt.name)}">${escapeHtml(debt.name)}</div>
-            </div>
-            <div class="text-right shrink-0">
-              <div class="text-lg font-bold text-white">${fmtMoneyExact(debt.balance)}</div>
-              <div class="text-[11px] text-slate-500">${debt.rate.toFixed(2)}% APR</div>
-            </div>
-          </div>
-          <div class="flex-1 grid grid-cols-2 gap-3 text-xs text-slate-400 mb-4">
-            <div><span class="text-slate-500">Min/mo</span><div class="text-slate-200 font-medium mt-0.5">${fmtMoneyExact(debt.min_payment)}</div></div>
-            <div><span class="text-slate-500">Settlement target</span><div class="text-slate-200 font-medium mt-0.5">${settlementTargetFor(debt.name)}</div></div>
-          </div>
-          <button data-negotiate class="btn-primary text-white text-sm font-semibold py-2.5 rounded-xl flex items-center justify-center gap-2">
-            <span>💬</span> Negotiate this debt
-          </button>`;
-        card.querySelector('[data-negotiate]').addEventListener('click', () => openNegotiate(debt));
-        debtCardsEl.appendChild(card);
-      });
-    }
-
-    // Lightweight client-side mirror of detect_debt_type for the card preview.
-    const TYPE_HINTS = [
-      { type: 'Medical debt',          rx: /\b(medical|hospital|doctor|clinic|health|dental|physician)\b/i },
-      { type: 'Federal student loan',  rx: /\b(fafsa|stafford|perkins|federal student|direct loan)\b/i },
-      { type: 'Credit card',           rx: /\b(credit|card|visa|mastercard|amex|discover|chase|capital one|citi|barclays|synchrony|comenity)\b/i },
-      { type: 'Private student loan',  rx: /\b(student|tuition|sallie|navient|earnest|college ave|education)\b/i },
-      { type: 'Auto loan',             rx: /\b(auto|car|vehicle|truck|motorcycle|carmax)\b/i },
-      { type: 'Personal loan',         rx: /\b(personal|lendingclub|prosper|upstart|marcus|loan|lending)\b/i },
+  // ---------- Crisis resources (stress >= 75) ----------
+  function renderCrisis(d){
+    const host = $('#crisis-host');
+    if (d.stress_score < 75){ host.remove(); return; }
+    const dti = d.monthly_income>0 ? (d.total_debt/(d.monthly_income*12))*100 : 0;
+    const RES = [
+      { name:'National Foundation for Credit Counseling', desc:'Nonprofit network of certified credit counselors. Free or low-cost budget review and debt management plans that often reduce interest rates.', href:'https://www.nfcc.org/', cta:'Find a counselor', phone:'1-800-388-2227' },
+      { name:'CFPB — Help with Debt', desc:'Federal guides on negotiating with creditors, dealing with collectors, and understanding your rights under the FDCPA.', href:'https://www.consumerfinance.gov/consumer-tools/debt-collection/', cta:'Read official guide' },
+      { name:'211.org — Local Assistance', desc:'Dial 2-1-1 or search by ZIP for local programs: rent assistance, utility help, food banks, and emergency cash aid.', href:'https://www.211.org/', cta:'Find local help', phone:'211' },
+      { name:'Upsolve — Free Bankruptcy Help', desc:'Nonprofit (Harvard-incubated) that helps qualifying low-income families file Chapter 7 bankruptcy for free. A last resort, but a legal one.', href:'https://upsolve.org/', cta:'Check eligibility' },
     ];
-    function detectTypeLabel(name) {
-      const lower = (name || '').toLowerCase();
-      for (const h of TYPE_HINTS) if (h.rx.test(lower)) return h.type;
-      return 'Consumer debt';
-    }
+    host.setAttribute('data-card','');
+    host.innerHTML = `
+      <div class="rounded-2xl bg-gradient-to-br from-rose-950/40 via-black/50 to-amber-950/30 backdrop-blur-xl border border-rose-500/30 p-6">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="w-10 h-10 rounded-xl bg-rose-500/20 border border-rose-400/40 grid place-items-center text-rose-300 text-lg">🛟</div>
+          <div>
+            <h3 class="text-base font-semibold">You don't have to do this alone</h3>
+            <p class="text-xs text-muted-foreground mt-0.5">Stress score ${d.stress_score}/100 · DTI ${dti.toFixed(0)}% · vetted, free or low-cost resources</p>
+          </div>
+        </div>
+        <div class="rounded-xl bg-rose-500/5 border border-rose-400/20 p-4 flex items-start gap-3 mb-4">
+          <span class="text-rose-300 shrink-0">⚠</span>
+          <div class="text-xs text-rose-100/90 leading-relaxed"><span class="font-semibold text-rose-200">Your numbers indicate genuine financial distress.</span> Before any settlement attempts, talk to a nonprofit credit counselor — most reviews are free, confidential, and they can negotiate on your behalf.</div>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          ${RES.map(r=>`<a href="${r.href}" target="_blank" rel="noopener noreferrer" class="group rounded-xl bg-black/40 border border-white/10 hover:border-rose-400/50 p-4 transition-all hover:bg-black/60">
+            <div class="flex items-start justify-between gap-2 mb-2"><div class="flex items-center gap-2"><span class="text-rose-300/80">🛡</span><h4 class="font-semibold text-sm text-white">${esc(r.name)}</h4></div><span class="text-white/40 group-hover:text-rose-300 transition">↗</span></div>
+            <p class="text-xs text-muted-foreground leading-relaxed mb-3">${esc(r.desc)}</p>
+            <div class="flex items-center justify-between gap-2 flex-wrap"><span class="text-xs font-medium text-rose-300 group-hover:text-rose-200">${esc(r.cta)} →</span>${r.phone?`<span class="text-xs text-white/60">📞 ${esc(r.phone)}</span>`:''}</div>
+          </a>`).join('')}
+        </div>
+        <p class="text-[11px] text-muted-foreground/70 leading-relaxed pt-3">DebtClear is a planning tool, not a substitute for professional advice. These are independent nonprofits and government agencies — we don't receive referral fees.</p>
+      </div>`;
+  }
 
-    // Quick-look settlement target for the card (server is authoritative).
-    function settlementTargetFor(name) {
-      const t = detectTypeLabel(name);
-      const map = {
-        'Credit card': '~50%', 'Personal loan': '~60%', 'Medical debt': '~35%',
-        'Auto loan': '~78%', 'Private student loan': '~70%',
-        'Federal student loan': 'IDR plan',
-        'Consumer debt': '~60%',
-      };
-      return map[t] || '~60%';
-    }
-
-    function escapeHtml(s) {
-      return String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[c]);
-    }
-
-    function openNegotiate(debt) {
-      lastNegotiateDebt = debt;
-      modal.hidden = false;
-      modal.scrollTop = 0;
-      document.body.style.overflow = 'hidden';
-
-      modalLoading.hidden = false;
-      modalError.hidden = true;
-      modalContent.hidden = true;
-
-      gsap.fromTo(modalCard,
-        { opacity: 0, y: 24, scale: 0.98 },
-        { opacity: 1, y: 0, scale: 1, duration: 0.35, ease: 'power3.out' });
-
-      fetchNegotiate(debt);
-    }
-
-    function closeNegotiate() {
-      gsap.to(modalCard, {
-        opacity: 0, y: 24, scale: 0.98, duration: 0.22, ease: 'power2.in',
-        onComplete: () => {
-          modal.hidden = true;
-          document.body.style.overflow = '';
-        },
-      });
-    }
-
-    modalClose.addEventListener('click', closeNegotiate);
-    modalBackdrop.addEventListener('click', closeNegotiate);
-    document.addEventListener('keydown', e => { if (e.key === 'Escape' && !modal.hidden) closeNegotiate(); });
-    modalRetry.addEventListener('click', () => { if (lastNegotiateDebt) fetchNegotiate(lastNegotiateDebt); });
-
-    async function fetchNegotiate(debt) {
-      modalLoading.hidden = false;
-      modalError.hidden = true;
-      modalContent.hidden = true;
-
-      const ctx = window.__debtClearContext || {};
-      try {
-        const res = await fetch('/api/negotiate/', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            debt: { name: debt.name, balance: debt.balance, rate: debt.rate, min_payment: debt.min_payment },
-            financial_context: {
-              monthly_income: ctx.monthly_income,
-              total_debt: ctx.total_debt,
-              stress_score: ctx.stress_score,
-            },
-            debt_count: ctx.debt_count || 1,
-          }),
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Negotiate API error');
-        renderNegotiate(debt, data);
-      } catch (err) {
-        modalLoading.hidden = true;
-        modalError.hidden = false;
-        modalErrorMsg.textContent = err.message || 'Network error.';
-      }
-    }
-
-    function renderNegotiate(debt, d) {
-      modalLoading.hidden = true;
-      modalError.hidden = true;
-
-      // Header
-      document.getElementById('modal-debt-name').textContent = debt.name;
-      document.getElementById('modal-debt-meta').textContent =
-        `${fmtMoneyExact(debt.balance)} balance · ${debt.rate.toFixed(2)}% APR · ${fmtMoneyExact(debt.min_payment)}/mo minimum`;
-
-      // Leverage
-      const la = d.leverage_analysis;
-      document.getElementById('lv-type').textContent = la.debt_type_label;
-      document.getElementById('lv-score').textContent = la.leverage_score;
-      const bar = document.getElementById('lv-bar');
-      requestAnimationFrame(() => { bar.style.width = la.leverage_score + '%'; });
-      document.getElementById('lv-range').textContent = `${la.settlement_low}–${la.settlement_high}%`;
-      document.getElementById('lv-target').textContent = `${la.settlement_target}%`;
-      document.getElementById('lv-saved').textContent = fmtMoneyExact(d.savings.dollars_saved);
-      document.getElementById('lv-saved-pct').textContent = `${d.savings.percentage_saved}% off balance`;
-
-      const factorsBox = document.getElementById('lv-factors');
-      factorsBox.innerHTML = '';
-      la.hardship_factors.forEach(f => {
-        const el = document.createElement('span');
-        el.className = 'text-[11px] font-medium text-slate-200 bg-white/5 border border-white/10 rounded-full px-2.5 py-1';
-        el.textContent = f;
-        factorsBox.appendChild(el);
-      });
-
-      const notesBox = document.getElementById('lv-notes');
-      if (la.notes && la.notes.length) {
-        notesBox.textContent = la.notes.join(' ');
-        notesBox.hidden = false;
-      } else {
-        notesBox.hidden = true;
-      }
-
-      // Scenarios
-      const r = d.savings_range;
-      document.getElementById('sc-best-amount').textContent = fmtMoneyExact(r.best_case.settlement_amount);
-      document.getElementById('sc-best-saved').textContent  = `Save ${fmtMoneyExact(r.best_case.dollars_saved)}`;
-      document.getElementById('sc-target-amount').textContent = fmtMoneyExact(r.target.settlement_amount);
-      document.getElementById('sc-target-saved').textContent  = `Save ${fmtMoneyExact(r.target.dollars_saved)}`;
-      document.getElementById('sc-worst-amount').textContent = fmtMoneyExact(r.worst_case.settlement_amount);
-      document.getElementById('sc-worst-saved').textContent  = `Save ${fmtMoneyExact(r.worst_case.dollars_saved)}`;
-
-      // Script sections
-      const sectionsHost = document.getElementById('script-sections');
-      sectionsHost.innerHTML = '';
-      const sectionPalette = {
-        opening:         { dot: 'bg-indigo-400',   label: 'text-indigo-300' },
-        hardship:        { dot: 'bg-fuchsia-400',  label: 'text-fuchsia-300' },
-        initial_offer:   { dot: 'bg-emerald-400',  label: 'text-emerald-300' },
-        if_they_say_no:  { dot: 'bg-amber-400',    label: 'text-amber-300' },
-        if_they_counter: { dot: 'bg-orange-400',   label: 'text-orange-300' },
-        closing:         { dot: 'bg-sky-400',      label: 'text-sky-300' },
-        avoid:           { dot: 'bg-rose-400',     label: 'text-rose-300' },
-      };
-
-      const lines = [];
-      d.script.section_order.forEach(({ key, title }) => {
-        const body = (d.script.sections[key] || '').trim();
-        if (!body) return;
-        const palette = sectionPalette[key] || { dot: 'bg-slate-400', label: 'text-slate-300' };
-        const block = document.createElement('div');
-        block.className = 'glass rounded-xl p-4 md:p-5';
-        const header = document.createElement('div');
-        header.className = 'flex items-center gap-2 mb-2';
-        header.innerHTML = `<span class="w-1.5 h-1.5 rounded-full ${palette.dot}"></span><span class="text-[11px] uppercase tracking-widest font-bold ${palette.label}">${escapeHtml(title)}</span>`;
-        block.appendChild(header);
-
-        if (key === 'avoid') {
-          const ul = document.createElement('ul');
-          ul.className = 'space-y-1.5 text-[14px] text-slate-200 leading-relaxed';
-          body.split(/\n/).map(s => s.replace(/^[-•]\s*/, '').trim()).filter(Boolean).forEach(item => {
-            const li = document.createElement('li');
-            li.className = 'flex gap-2';
-            li.innerHTML = `<span class="text-rose-400 mt-1">×</span><span>${escapeHtml(item)}</span>`;
-            ul.appendChild(li);
-          });
-          block.appendChild(ul);
-        } else {
-          const p = document.createElement('p');
-          p.className = 'text-[14px] text-slate-200 leading-relaxed whitespace-pre-line';
-          p.innerHTML = highlightMoney(escapeHtml(body));
-          block.appendChild(p);
-        }
-        sectionsHost.appendChild(block);
-        lines.push(`${title}\n${body}`);
-      });
-
-      lastScriptText = lines.join('\n\n');
-      document.getElementById('script-source-label').textContent = 'Generated by Claude Sonnet 4.6';
-
-      modalContent.hidden = false;
-      gsap.fromTo(modalContent,
-        { opacity: 0, y: 12 },
-        { opacity: 1, y: 0, duration: 0.4, ease: 'power3.out' });
-    }
-
-    function highlightMoney(htmlStr) {
-      return htmlStr.replace(/(\$[\d,]+(?:\.\d{2})?)/g,
-        '<span class="font-mono text-white bg-white/5 px-1 rounded">$1</span>');
-    }
-
-    copyBtn.addEventListener('click', async () => {
-      try {
-        await navigator.clipboard.writeText(lastScriptText);
-        copyLabel.textContent = 'Copied';
-        setTimeout(() => { copyLabel.textContent = 'Copy'; }, 1600);
-      } catch {
-        copyLabel.textContent = 'Press ⌘C';
-      }
+  // ---------- Negotiate cards ----------
+  function renderNegotiateCards(d){
+    const host = $('#neg-cards'); host.innerHTML = '';
+    const ctx = { monthly_income:d.monthly_income, total_debt:d.total_debt, stress_score:d.stress_score };
+    d.debts.forEach((debt,i) => {
+      const card = el('div', 'glass rounded-2xl p-5 cursor-pointer border border-white/10 hover:border-blue-400/40 transition-all');
+      card.innerHTML = `
+        <div class="flex items-start justify-between mb-3">
+          <div class="min-w-0"><p class="font-semibold text-sm truncate" title="${esc(debt.name)}">${esc(debt.name)}</p><p class="text-xs text-muted-foreground mt-0.5">${debt.rate.toFixed(2)}% APR</p></div>
+          <div class="w-8 h-8 rounded-lg bg-blue-500/10 grid place-items-center text-blue-300 shrink-0">🤝</div>
+        </div>
+        <p class="text-2xl font-bold text-white">${fmtMoney(debt.balance)}</p>
+        <p class="text-xs text-muted-foreground mt-0.5">Min ${fmtMoney(debt.min_payment)}/mo</p>
+        <div class="mt-4"><span class="text-xs text-blue-300 font-medium">Tap to negotiate →</span></div>`;
+      card.addEventListener('click', () => openNegotiate(debt, ctx, d.debts.length));
+      host.appendChild(card);
+      gsap.from(card, { opacity:0, scale:.95, duration:.4, delay:i*0.08, ease:'power2.out' });
     });
+  }
+
+  // ============================================================
+  //  NEGOTIATE MODAL (uses /api/negotiate)
+  // ============================================================
+  const negModal = $('#negotiate-modal'), negBody = $('#neg-body');
+  let negState = null;
+
+  function openModal(m){ m.hidden=false; document.body.style.overflow='hidden'; lenis.stop(); }
+  function closeModal(m){ m.hidden=true; if (negModal.hidden && $('#roleplay-modal').hidden && $('#letter-modal').hidden){ document.body.style.overflow=''; lenis.start(); } }
+
+  function openNegotiate(debt, ctx, debtCount){
+    negState = { debt, ctx, debtCount, result:null, open:-1 };
+    $('#neg-name').textContent = debt.name;
+    $('#neg-meta').textContent = `${fmtMoney(debt.balance)} · ${debt.rate.toFixed(2)}% APR`;
+    openModal(negModal);
+    negBody.innerHTML = `
+      <div class="p-8 flex flex-col items-center gap-6 text-center">
+        <div class="w-16 h-16 rounded-2xl bg-blue-500/10 grid place-items-center text-blue-300 text-3xl">✦</div>
+        <div>
+          <h3 class="text-xl font-bold mb-2">Generate Negotiation Script</h3>
+          <p class="text-muted-foreground text-sm max-w-md">AI will analyze your leverage and write a complete, word-for-word phone script to settle this debt for less.</p>
+        </div>
+        <button id="neg-gen" class="px-8 py-3 btn-white rounded-full font-semibold text-base inline-flex items-center gap-2">✦ Generate Script</button>
+      </div>`;
+    $('#neg-gen').addEventListener('click', loadNegotiate);
+  }
+
+  async function loadNegotiate(){
+    negBody.innerHTML = `<div class="p-12 flex flex-col items-center gap-4"><span class="spinner spinner-blue" style="width:40px;height:40px;border-width:3px"></span><p class="text-muted-foreground text-sm">AI is writing your script…</p></div>`;
+    try {
+      const r = await api('/api/negotiate/', { debt:negState.debt, financial_context:negState.ctx, debt_count:negState.debtCount });
+      negState.result = r;
+      renderNegotiateResult(r);
+    } catch (err) {
+      negBody.innerHTML = `<div class="p-12 text-center"><p class="text-rose-300 text-sm mb-4">${esc(err.message||'Failed to load script')}</p><button id="neg-retry" class="text-sm font-medium text-blue-300 hover:text-blue-200">Try again</button></div>`;
+      $('#neg-retry').addEventListener('click', loadNegotiate);
+    }
+  }
+
+  const LEV_BADGE = { 'Very High':'bg-emerald-500/15 text-emerald-300 border-emerald-400/30', 'High':'bg-emerald-500/15 text-emerald-300 border-emerald-400/30', 'Moderate':'bg-amber-500/15 text-amber-300 border-amber-400/30', 'Low':'bg-rose-500/15 text-rose-300 border-rose-400/30' };
+
+  function renderNegotiateResult(r){
+    const la = r.leverage_analysis, sv = r.savings, rng = r.savings_range;
+    negBody.innerHTML = `
+      <div class="p-5 space-y-5">
+        <div class="rounded-xl bg-gradient-to-r from-emerald-500/10 to-blue-500/10 border border-emerald-500/20 p-5">
+          <div class="flex items-center gap-2 mb-3"><span class="text-emerald-400">↘</span><span class="text-sm font-medium text-emerald-400">Projected Savings</span></div>
+          <div class="grid grid-cols-3 gap-4">
+            <div><div class="text-2xl font-bold gradient-text-green">${fmtMoney(sv.dollars_saved)}</div><div class="text-xs text-muted-foreground">Estimated Savings</div></div>
+            <div><div class="text-2xl font-bold text-white">${rng.worst_case.percentage_saved.toFixed(0)}%–${rng.best_case.percentage_saved.toFixed(0)}%</div><div class="text-xs text-muted-foreground">Settlement Range</div></div>
+            <div><span class="text-sm font-semibold px-3 py-1 rounded-full border ${LEV_BADGE[la.leverage_label]||'bg-white/5 text-white border-white/10'}">${esc(la.leverage_label)} Leverage</span><div class="text-xs text-muted-foreground mt-1">${esc(la.debt_type_label)}</div></div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-3 gap-3">
+          <div class="glass rounded-xl p-4"><div class="text-[11px] text-emerald-300 font-semibold uppercase tracking-wider">Best case</div><div class="text-lg font-bold text-white mt-1.5">${fmtMoney(rng.best_case.settlement_amount)}</div><div class="text-[11px] text-emerald-300 mt-0.5">Save ${fmtMoney(rng.best_case.dollars_saved)}</div></div>
+          <div class="glass rounded-xl p-4 ring-1 ring-fuchsia-400/30 bg-fuchsia-500/5"><div class="text-[11px] text-fuchsia-300 font-semibold uppercase tracking-wider">Target</div><div class="text-lg font-bold text-white mt-1.5">${fmtMoney(rng.target.settlement_amount)}</div><div class="text-[11px] text-fuchsia-300 mt-0.5">Save ${fmtMoney(rng.target.dollars_saved)}</div></div>
+          <div class="glass rounded-xl p-4"><div class="text-[11px] text-muted-foreground font-semibold uppercase tracking-wider">Worst case</div><div class="text-lg font-bold text-white mt-1.5">${fmtMoney(rng.worst_case.settlement_amount)}</div><div class="text-[11px] text-muted-foreground mt-0.5">Save ${fmtMoney(rng.worst_case.dollars_saved)}</div></div>
+        </div>
+
+        ${la.hardship_factors && la.hardship_factors.length ? `<div class="flex flex-wrap gap-1.5">${la.hardship_factors.map(f=>`<span class="text-[11px] font-medium text-white/80 bg-white/5 border border-white/10 rounded-full px-2.5 py-1">${esc(f)}</span>`).join('')}</div>`:''}
+        ${la.notes && la.notes.length ? `<div class="text-xs text-amber-300/90 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2">${esc(la.notes.join(' '))}</div>`:''}
+
+        <div class="space-y-3">
+          <div class="flex items-center justify-between flex-wrap gap-2">
+            <div><h3 class="font-semibold text-sm">Phone Script</h3><div class="text-[11px] text-muted-foreground mt-0.5">${esc(aiSourceLabel(r.script.source))}</div></div>
+            <div class="flex items-center gap-2 flex-wrap">
+              <button id="neg-practice" class="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-black rounded-md text-xs font-semibold inline-flex items-center gap-1.5 transition">🎤 Practice Call</button>
+              <button id="neg-letter" class="px-3 py-1.5 bg-blue-500 hover:bg-blue-400 text-white rounded-md text-xs font-semibold inline-flex items-center gap-1.5 transition">📄 Letter</button>
+              <button id="neg-copy" class="px-3 py-1.5 border border-white/15 hover:bg-white/5 text-white rounded-md text-xs font-semibold inline-flex items-center gap-1.5 transition">⧉ Copy All</button>
+            </div>
+          </div>
+          <div id="neg-sections" class="space-y-3"></div>
+        </div>
+
+        <div class="text-[11px] text-muted-foreground/70 leading-relaxed pt-2 border-t border-white/5">Settlement ranges reflect typical creditor behaviour for unsecured consumer debt. Actual outcomes vary by account age and delinquency status. Always get any agreement in writing before sending payment.</div>
+      </div>`;
+
+    const host = $('#neg-sections');
+    r.script.section_order.forEach(({key,title}, idx) => {
+      const body = (r.script.sections[key]||'').trim(); if (!body) return;
+      const item = el('div','');
+      item.innerHTML = `
+        <button class="w-full text-left glass rounded-xl p-4 border border-white/10 transition" data-acc>
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3"><span class="w-6 h-6 rounded-full bg-blue-500/20 grid place-items-center text-xs text-blue-300 font-bold">${idx+1}</span><span class="font-medium text-sm">${esc(title)}</span></div>
+            <span data-chev class="text-muted-foreground transition-transform">›</span>
+          </div>
+          <div data-panel class="overflow-hidden" style="height:0">
+            <p class="mt-3 text-sm text-muted-foreground leading-relaxed whitespace-pre-line pl-9">${esc(body)}</p>
+          </div>
+        </button>`;
+      const btn = item.querySelector('[data-acc]'), panel = item.querySelector('[data-panel]'), chev = item.querySelector('[data-chev]');
+      btn.addEventListener('click', () => {
+        const open = panel.style.height !== '0px' && panel.style.height !== '';
+        if (open){ gsap.to(panel,{height:0,duration:.25}); chev.style.transform=''; btn.classList.remove('border-blue-500/50'); }
+        else { panel.style.height='auto'; const h=panel.offsetHeight; panel.style.height='0px'; gsap.to(panel,{height:h,duration:.25,onComplete:()=>panel.style.height='auto'}); chev.style.transform='rotate(90deg)'; btn.classList.add('border-blue-500/50'); }
+      });
+      host.appendChild(item);
+      gsap.from(item, { opacity:0, x:-16, duration:.4, delay:idx*0.06 });
+    });
+
+    $('#neg-copy').addEventListener('click', () => {
+      const text = r.script.section_order.map(({key,title})=>`${title}\n${r.script.sections[key]}`).join('\n\n');
+      navigator.clipboard.writeText(text).then(()=>toast('Script copied to clipboard','success')).catch(()=>toast('Press ⌘/Ctrl+C','info'));
+    });
+    $('#neg-practice').addEventListener('click', () => openRoleplay(negState.debt, la));
+    $('#neg-letter').addEventListener('click', () => openLetter(negState.debt, la, { monthly_income:negState.ctx.monthly_income, total_debt:negState.ctx.total_debt }));
+  }
+
+  $$('[data-neg-close]').forEach(b => b.addEventListener('click', () => closeModal(negModal)));
+
+  // ============================================================
+  //  ROLEPLAY MODAL (uses /api/roleplay + Web Speech API)
+  // ============================================================
+  const rpModal = $('#roleplay-modal');
+  let rp = null;
+  function SR(){ return window.SpeechRecognition || window.webkitSpeechRecognition || null; }
+
+  function openRoleplay(debt, leverage){
+    rp = { debt, leverage, status:'idle', history:[], recognition:null, finalT:'', listening:false, speaking:false, thinking:false, cancelled:false, settlement:null, micBad:false };
+    $('#rp-sub').textContent = 'Collections · ' + debt.name;
+    openModal(rpModal);
+    rpRenderStatus(); rpRenderActivity();
+    const convo = $('#rp-convo');
+    convo.innerHTML = `
+      <div class="flex flex-col items-center justify-center py-8 text-center gap-4">
+        <div class="w-20 h-20 rounded-full bg-gradient-to-br from-emerald-500/20 to-blue-500/20 border border-white/10 grid place-items-center text-emerald-400 text-3xl">🎤</div>
+        <div class="max-w-md">
+          <h3 class="text-xl font-bold text-white mb-2">Practice your call</h3>
+          <p class="text-sm text-zinc-400 leading-relaxed">You'll roleplay the negotiation with Sarah, an AI collections agent. She'll push back, counter, and only settle if you make a strong case. Use your script as a guide.</p>
+        </div>
+        <button id="rp-start" class="mt-2 px-8 py-3 bg-emerald-500 hover:bg-emerald-400 text-black rounded-full font-semibold text-sm inline-flex items-center gap-2 transition">🎤 Start the call</button>
+      </div>`;
+    $('#rp-controls').innerHTML = '';
+    $('#rp-start').addEventListener('click', rpStart);
+  }
+
+  function rpRenderStatus(){
+    const s = rp.status, host = $('#rp-status');
+    const map = {
+      idle:'<span class="text-zinc-500">Ready to call</span>',
+      ringing:'<span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span><span class="text-amber-400">Connecting…</span>',
+      active:'<span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span><span class="text-emerald-400">Live call</span>',
+      settled:`<span class="text-emerald-400">✓ Settled · ${rp.settlement!=null?fmtMoney(rp.settlement):''}</span>`,
+      declined:'<span class="text-rose-400">✕ No deal</span>',
+      ended:'<span class="text-zinc-500">Call ended</span>',
+    };
+    host.innerHTML = map[s] || map.idle;
+  }
+  function rpRenderActivity(){
+    const host = $('#rp-activity');
+    if (rp.speaking) host.innerHTML = '<span class="text-blue-400">🔊 Sarah speaking</span>';
+    else if (rp.thinking) host.innerHTML = '<span>Thinking…</span>';
+    else if (rp.listening) host.innerHTML = '<span class="text-emerald-400">🎤 Listening</span>';
+    else host.innerHTML = '';
+  }
+
+  function rpSpeak(text){
+    if (!window.speechSynthesis) return;
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.rate=1; u.pitch=1;
+    const voices = speechSynthesis.getVoices();
+    const pref = voices.find(v=>/en-US/i.test(v.lang)&&/female|samantha|zira|jenny/i.test(v.name)) || voices.find(v=>/en-US/i.test(v.lang)) || voices.find(v=>/^en/i.test(v.lang));
+    if (pref) u.voice = pref;
+    rp.speaking = true; rpRenderActivity();
+    const done = () => { rp.speaking=false; rpRenderActivity(); };
+    u.onend = done; u.onerror = done;
+    const dur = Math.max(2000, (text.split(/\s+/).length/150)*60*1000);
+    setTimeout(done, dur+1000);
+    try { speechSynthesis.speak(u); } catch { done(); }
+  }
+
+  async function rpFetch(history){
+    try {
+      const r = await api('/api/roleplay/', { debt:rp.debt, leverage:rp.leverage, history });
+      let s = (r.status==='settled')?'settled':(r.status==='declined')?'declined':'active';
+      return { message:r.message, status:s, amount:r.settlement_amount };
+    } catch (err){ toast(err.message||'Connection lost','error'); return null; }
+  }
+
+  function rpBubble(role, text){
+    const convo = $('#rp-convo');
+    const wrap = el('div', `flex ${role==='user'?'justify-end':'justify-start'}`);
+    wrap.innerHTML = `<div class="max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${role==='user'?'bg-blue-500/20 border border-blue-400/30 text-blue-50 rounded-br-sm':'bg-white/5 border border-white/10 text-zinc-100 rounded-bl-sm'}">${role==='creditor'?'<div class="text-[10px] uppercase tracking-wider text-zinc-500 mb-0.5">Sarah</div>':''}${esc(text)}</div>`;
+    convo.appendChild(wrap); gsap.from(wrap,{opacity:0,y:8,duration:.3}); convo.scrollTop = convo.scrollHeight;
+  }
+  function rpTyping(on){
+    const convo = $('#rp-convo'); let t = $('#rp-typing');
+    if (on && !t){ t = el('div','flex justify-start'); t.id='rp-typing'; t.innerHTML=`<div class="bg-white/5 border border-white/10 rounded-2xl rounded-bl-sm px-4 py-3 flex gap-1"><span class="typing-dot"></span><span class="typing-dot" style="animation-delay:.15s"></span><span class="typing-dot" style="animation-delay:.3s"></span></div>`; convo.appendChild(t); convo.scrollTop=convo.scrollHeight; }
+    else if (!on && t) t.remove();
+  }
+
+  async function rpStart(){
+    rp.cancelled=false; rp.status='ringing'; rp.history=[]; rp.settlement=null;
+    $('#rp-convo').innerHTML = `<div class="flex flex-col items-center justify-center py-12 gap-4"><div class="w-16 h-16 rounded-full bg-amber-400/10 border border-amber-400/30 grid place-items-center"><span class="spinner" style="width:28px;height:28px;border-top-color:#fbbf24;border-color:rgba(251,191,36,.25)"></span></div><p class="text-sm text-zinc-400">Connecting to Sarah…</p></div>`;
+    rpRenderStatus();
+    rp.thinking=true; rpRenderActivity();
+    const opener = await rpFetch([]);
+    rp.thinking=false; rpRenderActivity();
+    if (!opener || rp.cancelled){ rp.status='idle'; rpRenderStatus(); return; }
+    rp.status='active'; rpRenderStatus();
+    $('#rp-convo').innerHTML='';
+    rp.history=[{role:'creditor',text:opener.message}];
+    rpBubble('creditor', opener.message); rpSpeak(opener.message);
+    rpControls();
+  }
+
+  async function rpSubmit(text){
+    text = text.trim(); if (!text) return;
+    rp.history.push({role:'user',text}); rpBubble('user',text);
+    rp.thinking=true; rpRenderActivity(); rpTyping(true);
+    const reply = await rpFetch(rp.history);
+    rp.thinking=false; rpRenderActivity(); rpTyping(false);
+    if (!reply || rp.cancelled) return;
+    rp.history.push({role:'creditor',text:reply.message});
+    rpBubble('creditor', reply.message); rpSpeak(reply.message);
+    if (reply.status==='settled'){ rp.status='settled'; rp.settlement=reply.amount; rpRenderStatus(); toast(`Settled for ${fmtMoney(reply.amount||0)}!`,'success');
+      const banner = el('div','bg-gradient-to-r from-emerald-500/15 to-blue-500/15 border border-emerald-400/30 rounded-xl p-4 mt-4');
+      banner.innerHTML = `<div class="flex items-center gap-2 text-emerald-400 text-sm font-semibold mb-1">✓ Deal closed</div><div class="text-2xl font-bold text-white">${fmtMoney(reply.amount||0)}</div><div class="text-xs text-zinc-400 mt-1">You saved ${fmtMoney(rp.debt.balance-(reply.amount||0))} on a ${fmtMoney(rp.debt.balance)} balance</div>`;
+      $('#rp-convo').appendChild(banner); $('#rp-convo').scrollTop = $('#rp-convo').scrollHeight;
+    } else if (reply.status==='declined'){ rp.status='declined'; rpRenderStatus(); }
+    rpControls();
+  }
+
+  function rpControls(){
+    const host = $('#rp-controls');
+    const live = ['active','settled','declined'].includes(rp.status);
+    if (!live){ host.innerHTML = `<div class="flex justify-center p-4"><button data-rp-close class="px-6 py-2.5 bg-white/10 hover:bg-white/20 text-white rounded-full text-sm font-medium transition">Close</button></div>`; bindRpClose(); return; }
+    host.innerHTML = `
+      <div class="flex items-center gap-2 px-4 pt-3 pb-2">
+        <input id="rp-input" type="text" placeholder="Type your response…" autocomplete="off" class="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-zinc-500 outline-none focus:border-emerald-500/50 transition" />
+        <button id="rp-send" class="w-10 h-10 rounded-xl bg-emerald-500 hover:bg-emerald-400 grid place-items-center transition shrink-0 text-black">➤</button>
+      </div>
+      <div class="flex items-center justify-between px-4 pb-3">
+        <div>${ rp.micBad ? '<span class="text-xs text-zinc-500">Voice unavailable — type instead</span>' : `<button id="rp-mic" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-white/5 text-zinc-300 border border-white/10 hover:border-emerald-500/40 transition">🎤 Voice</button>` }</div>
+        <button id="rp-end" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-600/20 text-rose-300 border border-rose-600/30 hover:bg-rose-600/30 text-xs font-medium transition">☎ End call</button>
+      </div>`;
+    const input = $('#rp-input');
+    const sendNow = () => { const t = input.value.trim(); if (!t || rp.thinking) return; input.value=''; rpSubmit(t); setTimeout(()=>input.focus(),50); };
+    $('#rp-send').addEventListener('click', sendNow);
+    input.addEventListener('keydown', e => { if (e.key==='Enter' && !e.shiftKey){ e.preventDefault(); sendNow(); } });
+    const micBtn = $('#rp-mic'); if (micBtn) micBtn.addEventListener('click', rpToggleMic);
+    $('#rp-end').addEventListener('click', rpEnd);
+    bindRpClose();
+    setTimeout(()=>input.focus(), 100);
+  }
+
+  function rpToggleMic(){
+    const Rec = SR(); if (!Rec){ rp.micBad=true; rpControls(); return; }
+    if (rp.listening){ try{ rp.recognition?.stop(); }catch{} rp.listening=false; rpRenderActivity(); return; }
+    if (rp.speaking || rp.thinking) return;
+    rp.finalT=''; const rec = new Rec(); rec.continuous=false; rec.interimResults=true; rec.lang='en-US';
+    rec.onresult = (e) => { let interim='',final=''; for (let i=0;i<e.results.length;i++){ const r=e.results[i]; (r.isFinal?final+=r[0].transcript:interim+=r[0].transcript); } if (final) rp.finalT+=final; const inp=$('#rp-input'); if (inp) inp.value = rp.finalT+interim; };
+    rec.onend = () => { rp.listening=false; rpRenderActivity(); const t=rp.finalT.trim(); if (t) rpSubmit(t); const inp=$('#rp-input'); if (inp) inp.value=''; };
+    rec.onerror = (e) => { rp.listening=false; rpRenderActivity(); if (e.error==='network'||e.error==='service-not-allowed'){ rp.micBad=true; rpControls(); } else if (e.error!=='aborted'&&e.error!=='no-speech') toast('Microphone error: '+e.error,'error'); };
+    rp.recognition = rec; try { rec.start(); rp.listening=true; rpRenderActivity(); } catch {}
+  }
+
+  function rpEnd(){
+    rp.cancelled=true; try{ rp.recognition?.abort(); }catch{} if (window.speechSynthesis) speechSynthesis.cancel();
+    rp.listening=false; rp.speaking=false; rp.thinking=false; rpRenderActivity();
+    if (rp.status==='active'||rp.status==='ringing'){ rp.status='ended'; rpRenderStatus(); }
+    rpControls();
+  }
+  function bindRpClose(){ $$('[data-rp-close]').forEach(b => b.onclick = () => { rpEnd(); closeModal(rpModal); }); }
+  bindRpClose();
+
+  // ============================================================
+  //  SETTLEMENT LETTER MODAL (uses /api/letter + jsPDF)
+  // ============================================================
+  const ltModal = $('#letter-modal');
+  let ltState = null;
+
+  async function openLetter(debt, leverage, ctx){
+    ltState = { debt, leverage, ctx, body:null };
+    $('#lt-sub').textContent = `${debt.name} · ${fmtMoney(debt.balance)}`;
+    $('#lt-actions').hidden = true;
+    openModal(ltModal);
+    $('#lt-body').innerHTML = `<div class="flex flex-col items-center justify-center py-16 gap-4"><span class="spinner spinner-blue" style="width:40px;height:40px;border-width:3px"></span><div class="text-center"><p class="text-sm font-medium text-white">AI is drafting your letter…</p><p class="text-xs text-muted-foreground mt-1">Formal certified-mail format</p></div></div>`;
+    try {
+      const r = await api('/api/letter/', { debt, leverage, financial_context:ctx });
+      ltState.body = r.body;
+      $('#lt-body').innerHTML = `
+        <div class="space-y-4">
+          <div class="flex items-center gap-2 px-3 py-2 rounded-lg bg-emerald-500/10 border border-emerald-400/20 text-xs text-emerald-300">✦ Draft ready. Review, fill in your personal details, and mail by certified mail with return receipt.</div>
+          <div class="letter-paper rounded-xl p-8 text-sm leading-relaxed whitespace-pre-line shadow-2xl">
+            <div class="text-zinc-700 mb-6">${longDate()}</div>
+            <div class="text-zinc-800 mb-6">${esc(debt.name)}<br/>Collections Department<br/>[Creditor Address]</div>
+            <div class="text-zinc-900">${esc(r.body)}</div>
+          </div>
+        </div>`;
+      $('#lt-actions').hidden = false;
+      $('#lt-actions').innerHTML = `
+        <div class="flex items-center justify-between gap-3">
+          <p class="text-xs text-muted-foreground hidden sm:block">Mail certified · Keep a copy · Wait 30 days for response</p>
+          <div class="flex items-center gap-2 ml-auto">
+            <button id="lt-copy" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 text-xs font-medium text-white transition">⧉ Copy</button>
+            <button id="lt-pdf" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-blue-500 hover:bg-blue-400 text-xs font-semibold text-white transition">⬇ Download PDF</button>
+          </div>
+        </div>`;
+      $('#lt-copy').addEventListener('click', () => {
+        const full = `${longDate()}\n\n${debt.name}\nCollections Department\n[Creditor Address]\n\n${r.body}`;
+        navigator.clipboard.writeText(full).then(()=>toast('Letter copied to clipboard','success')).catch(()=>toast('Press ⌘/Ctrl+C','info'));
+      });
+      $('#lt-pdf').addEventListener('click', () => downloadLetterPDF(debt, r.body));
+    } catch (err) {
+      $('#lt-body').innerHTML = `<div class="py-16 text-center text-rose-300 text-sm">${esc(err.message||'Failed to generate letter')}</div>`;
+    }
+  }
+  $$('[data-lt-close]').forEach(b => b.addEventListener('click', () => closeModal(ltModal)));
+
+  function downloadLetterPDF(debt, body){
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit:'pt', format:'letter' });
+    const margin=56, lineH=14, maxW = doc.internal.pageSize.getWidth()-margin*2; let y=margin;
+    doc.setFont('times','normal'); doc.setFontSize(11);
+    doc.text(longDate(), margin, y); y+=lineH*2;
+    doc.text(debt.name, margin, y); y+=lineH;
+    doc.text('Collections Department', margin, y); y+=lineH;
+    doc.text('[Creditor Address]', margin, y); y+=lineH*2;
+    body.split(/\n\n+/).forEach(para => {
+      const isHeader = /^[A-Z][A-Z\s,:&]+$/.test(para.trim()) && para.trim().length < 60;
+      doc.setFont('times', isHeader?'bold':'normal'); doc.setFontSize(11);
+      doc.splitTextToSize(para, maxW).forEach(line => { if (y > doc.internal.pageSize.getHeight()-margin){ doc.addPage(); y=margin; } doc.text(line, margin, y); y+=lineH; });
+      y += lineH*0.6;
+    });
+    doc.save(`settlement-letter-${debt.name.replace(/[^a-z0-9]+/gi,'_').toLowerCase()}.pdf`);
+    toast('PDF downloaded','success');
+  }
+
+  // ============================================================
+  //  PLAN PDF (jsPDF — ported from planPdf.ts)
+  // ============================================================
+  function downloadPlanPDF(result){
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit:'pt', format:'letter' });
+    const W = doc.internal.pageSize.getWidth(), H = doc.internal.pageSize.getHeight(), M = 56;
+    const isAva = result.recommended_strategy === 'avalanche';
+    const rec = isAva ? result.avalanche : result.snowball;
+    let y = M;
+    const ensure = (n) => { if (y+n > H-M){ doc.addPage(); y=M; } };
+    const wrap = (text, o={}) => {
+      const size=o.size??11, lh=size*1.4; doc.setFont('helvetica', o.bold?'bold':'normal'); doc.setFontSize(size);
+      if (o.color) doc.setTextColor(...o.color); else doc.setTextColor(30,30,35);
+      doc.splitTextToSize(text, W-M*2-(o.indent??0)).forEach(line => { ensure(lh); doc.text(line, M+(o.indent??0), y); y+=lh; });
+      y += o.gap??0;
+    };
+    const payoffDate = (m) => { const d=new Date(); d.setMonth(d.getMonth()+m); return d.toLocaleDateString('en-US',{month:'long',year:'numeric'}); };
+
+    // Cover
+    doc.setFillColor(10,10,26); doc.rect(0,0,W,H,'F');
+    doc.setFillColor(16,185,129); doc.rect(0,0,W,6,'F');
+    doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(110,231,183); doc.text('DEBTCLEAR', M, 80);
+    doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.setTextColor(180,200,220); doc.text('Your personalized debt freedom plan', M, 96);
+    doc.setFontSize(11); doc.setTextColor(160,180,200); doc.text('YOU WILL BE DEBT-FREE BY', M, 200);
+    doc.setFont('helvetica','bold'); doc.setFontSize(40); doc.setTextColor(255,255,255); doc.text(payoffDate(rec.months), M, 240);
+    doc.setFont('helvetica','normal'); doc.setFontSize(12); doc.setTextColor(180,200,220); doc.text(`In ${rec.months} months — using the ${isAva?'Avalanche':'Snowball'} method`, M, 264);
+    const cardW=(W-M*2-20)/2, cardH=90, sY=340;
+    const stat=(x,sy,label,val,accent)=>{ doc.setFillColor(20,22,40); doc.roundedRect(x,sy,cardW,cardH,8,8,'F'); doc.setDrawColor(...accent); doc.setLineWidth(.5); doc.roundedRect(x,sy,cardW,cardH,8,8,'S'); doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(140,160,180); doc.text(label.toUpperCase(), x+16, sy+24); doc.setFont('helvetica','bold'); doc.setFontSize(20); doc.setTextColor(...accent); doc.text(val, x+16, sy+56); };
+    stat(M,sY,'Total debt', fmtMoney(result.total_debt), [255,255,255]);
+    stat(M+cardW+20,sY,'Interest saved', fmtMoney(result.interest_saved), [110,231,183]);
+    stat(M,sY+cardH+16,'Months saved', `${result.months_saved} mo`, [147,197,253]);
+    stat(M+cardW+20,sY+cardH+16,'Stress score', `${result.stress_score}/100`, [253,186,116]);
+    doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(120,140,160);
+    doc.text(`Generated ${longDate()}`, M, H-50); doc.text('debtclear.aryangorde.com', W-M, H-50, {align:'right'});
+
+    // Page 2 — strategy + AI
+    doc.addPage(); y=M;
+    wrap('Your Strategy', { size:18, bold:true, gap:6 });
+    wrap(`The math says ${isAva?'Avalanche':'Snowball'} is right for your portfolio.`, { size:11, color:[80,90,100], gap:18 });
+    doc.setFillColor(245,247,250); doc.roundedRect(M,y,W-M*2,90,6,6,'F'); doc.setDrawColor(220,225,230); doc.roundedRect(M,y,W-M*2,90,6,6,'S');
+    doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(60,70,80);
+    doc.text('METHOD', M+16, y+22); doc.text('DEBT-FREE IN', M+200, y+22); doc.text('TOTAL INTEREST', M+340, y+22);
+    doc.setFont('helvetica', isAva?'bold':'normal'); doc.setTextColor(isAva?16:60, isAva?185:70, isAva?129:80); doc.setFontSize(11);
+    doc.text(`Avalanche${isAva?'  ✓':''}`, M+16, y+48); doc.setTextColor(60,70,80);
+    doc.text(`${result.avalanche.months} mo`, M+200, y+48); doc.text(fmtMoney(result.avalanche.total_interest), M+340, y+48);
+    doc.setFont('helvetica', !isAva?'bold':'normal'); doc.setTextColor(!isAva?16:60, !isAva?185:70, !isAva?129:80);
+    doc.text(`Snowball${!isAva?'  ✓':''}`, M+16, y+72); doc.setTextColor(60,70,80);
+    doc.text(`${result.snowball.months} mo`, M+200, y+72); doc.text(fmtMoney(result.snowball.total_interest), M+340, y+72);
+    y+=110;
+    wrap("Your Advisor's Notes", { size:14, bold:true, gap:8 });
+    (result.ai_analysis||'').split('\n\n').filter(Boolean).forEach(p => wrap(p, { size:10.5, gap:10, color:[55,65,75] }));
+
+    // Page 3 — debts + action plan
+    doc.addPage(); y=M;
+    wrap('Your Debts', { size:18, bold:true, gap:14 });
+    const ordered = [...result.debts].sort((a,b)=> isAva ? b.rate-a.rate : a.balance-b.balance);
+    doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(120,130,140);
+    doc.text('#', M, y); doc.text('DEBT', M+24, y); doc.text('BALANCE', M+240, y); doc.text('APR', M+340, y); doc.text('MIN/MO', M+410, y);
+    y+=8; doc.setDrawColor(220,225,230); doc.line(M,y,W-M,y); y+=14;
+    ordered.forEach((d,i)=>{ ensure(20); doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(i===0?16:30, i===0?185:30, i===0?129:35); doc.text(`${i+1}`, M, y); doc.setTextColor(30,30,35); doc.text(d.name, M+24, y); doc.setFont('helvetica','normal'); doc.text(fmtMoney(d.balance), M+240, y); doc.text(`${d.rate.toFixed(2)}%`, M+340, y); doc.text(fmtMoney(d.min_payment), M+410, y); if (i===0){ doc.setFont('helvetica','italic'); doc.setFontSize(9); doc.setTextColor(16,185,129); doc.text('← attack this one first', M+470, y); } y+=22; });
+    y+=14;
+    wrap('Your Action Plan', { size:16, bold:true, gap:12 });
+    const top = ordered[0], aim = top.min_payment + result.extra_payment;
+    const steps = [
+      `This month: pay ${fmtMoney(aim)} toward "${top.name}" — its ${fmtMoney(top.min_payment)} minimum plus your full ${fmtMoney(result.extra_payment)} extra. Pay every other debt only its minimum.`,
+      `Next month: same playbook. Compounding works against you on the high-rate balance — every dollar redirected here saves the most.`,
+      `When "${top.name}" is paid off: roll its full payment into the next debt. Don't shrink your monthly outflow — keep the snowball rolling.`,
+      `Every quarter: re-run your numbers in DebtClear. As balances fall, your stress score drops and your strategy tightens.`,
+      `Track wins: every paid-off card is a permanent raise. Your future self gets that money back, every month, forever.`,
+    ];
+    steps.forEach((s,i)=>{ ensure(30); doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(16,185,129); doc.text(`${i+1}.`, M, y); doc.setFont('helvetica','normal'); doc.setTextColor(40,50,60); let ly=y; doc.splitTextToSize(s, W-M*2-24).forEach(line=>{ ensure(16); doc.text(line, M+24, ly); ly+=15; }); y=ly+6; });
+    ensure(50); y=Math.max(y, H-80); doc.setDrawColor(220,225,230); doc.line(M,y,W-M,y); y+=14;
+    doc.setFont('helvetica','italic'); doc.setFontSize(9); doc.setTextColor(120,130,140);
+    doc.text('DebtClear is a planning tool, not financial advice. Numbers come from a deterministic simulator using your inputs.', M, y); y+=12;
+    doc.text(`Generated ${longDate()} · debtclear.aryangorde.com`, M, y);
+    doc.save(`debtclear-plan-${Date.now()}.pdf`);
+    toast('Plan PDF downloaded','success');
+  }
+
+  // Global ESC to close any open modal
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Escape') return;
+    if (!ltModal.hidden) closeModal(ltModal);
+    else if (!rpModal.hidden){ rpEnd(); closeModal(rpModal); }
+    else if (!negModal.hidden) closeModal(negModal);
+  });
   </script>
 </body>
 </html>

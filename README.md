@@ -6,13 +6,13 @@
 [![Python](https://img.shields.io/badge/Python-3.12-3776AB.svg)](https://python.org)
 [![Django](https://img.shields.io/badge/Django-5.0-092E20.svg)](https://www.djangoproject.com/)
 [![DRF](https://img.shields.io/badge/DRF-3.15-A30000.svg)](https://www.django-rest-framework.org/)
-[![Next.js](https://img.shields.io/badge/Next.js-14-000000.svg)](https://nextjs.org/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6.svg)](https://www.typescriptlang.org/)
-[![Tailwind](https://img.shields.io/badge/Tailwind-3.4-06B6D4.svg)](https://tailwindcss.com/)
+[![Tailwind](https://img.shields.io/badge/Tailwind-CDN-06B6D4.svg)](https://tailwindcss.com/)
 [![Groq](https://img.shields.io/badge/Groq-Llama%203.3%2070B-F55036.svg)](https://groq.com/)
 [![AWS EC2](https://img.shields.io/badge/Deployed-AWS%20EC2-FF9900.svg)](https://aws.amazon.com/ec2/)
 
 **Live demo:** https://debtclear.aryangorde.com
+
+> **Architecture note:** DebtClear is a **pure-Python** application — Django + Django REST Framework on the backend, with the UI served as a single server-rendered template (`templates/index.html`, vanilla HTML/JS, no build step or Node toolchain). There is no TypeScript or JavaScript framework in this project.
 
 ---
 
@@ -29,11 +29,11 @@ DebtClear takes a user's debt portfolio (multiple debts with balance, APR, minim
 1. Simulates **Avalanche** (highest interest rate first), **Snowball** (lowest balance first), and a **minimum-only** baseline month-by-month with real interest compounding.
 2. Computes total interest paid, months to debt-free, and the exact dollar / time difference between the two active strategies vs. the do-nothing baseline.
 3. Calculates a **Financial Stress Score (0–100)** combining debt-to-income ratio, monthly-payment burden, and weighted average rate.
-4. Visualises the payoff trajectory, debt mix, milestone timeline, and "cost of waiting" with interactive Recharts charts.
+4. Visualises the payoff trajectory, debt mix, milestone timeline, and "cost of waiting" with interactive **Chart.js** charts.
 5. Sends the math to **Llama 3.3 70B** (via Groq's low-latency inference API) for a 3-paragraph personalised analysis.
-6. Lets the user **chat with an AI advisor** that has their full snapshot in context ("what if I lose my job?", "should I refinance?").
-7. Exposes a **Negotiate Mode** for every debt — leverage scoring, settlement ranges, full phone scripts, voice roleplay, and certified-mail letters.
-8. Exports the entire plan as a **downloadable PDF**.
+6. Exposes a **Negotiate Mode** for every debt — leverage scoring, settlement ranges, and full phone scripts.
+
+The bundled web UI ships the full **analyze** flow (strategies, stress score, charts) and **negotiate** (leverage + phone script). Additional capabilities — the what-if **simulate** endpoint, voice **roleplay**, certified-mail **settlement letters**, and grounded advisor **chat** — are exposed as REST endpoints (see [API](#api)) for programmatic use.
 
 ## ⚡ Negotiate Mode
 
@@ -45,8 +45,8 @@ Most consumers don't know that **creditors regularly settle debts for 40–60% o
 2. **Compute a realistic settlement range** grounded in real-world creditor behaviour: 40–60% on credit cards, 25–50% on medical, 70–85% on secured auto debt, IDR enrollment instead of settlement on federal student loans.
 3. **Generate a 7-section phone script** with the LLM — opening, hardship statement, initial offer, counter-responses for "if they say no" and "if they counter," closing language demanding written agreement, and three things to never say.
 4. **Show projected savings** as best/target/worst case scenarios with exact dollar figures.
-5. **Practice the call** — a built-in voice roleplay where the user negotiates against an AI collections agent that pushes back, counters, and only settles if they make a strong case (Web Speech API for STT/TTS).
-6. **Generate a formal settlement letter** — certified-mail-ready text the user can copy or download as PDF.
+5. **Practice the call** — a voice roleplay (`/api/roleplay/`) where the user negotiates against an AI collections agent that pushes back, counters, and only settles if they make a strong case.
+6. **Generate a formal settlement letter** (`/api/letter/`) — certified-mail-ready text the user can copy or print.
 
 Every engine ships with a deterministic fallback so the app never produces an empty card, even when Groq is unreachable.
 
@@ -57,73 +57,53 @@ Every engine ships with a deterministic fallback so the app never produces an em
 | **Backend** | Python 3.12, Django 5.0, Django REST Framework 3.15, django-cors-headers, python-dotenv               |
 | **AI**      | **Groq** — `llama-3.3-70b-versatile` (sole provider) with deterministic per-engine fallback           |
 | **AI infra**| Multi-key Groq client pool (`api/groq_pool.py`) with round-robin failover, 20s hard timeout, `max_retries=0` |
-| **Frontend**| Next.js 14 (App Router), TypeScript 5, Tailwind CSS 3.4, Framer Motion 12, Recharts 3, jsPDF 4, Lucide icons, Sonner toasts |
-| **UI primitives** | shadcn/ui on top of Radix UI (dialog, progress, slot, tabs, tooltip)                            |
-| **Visuals** | Custom WebGL fragment shader (animated nebula background, adaptive resolution on mobile)              |
-| **Voice**   | Browser Web Speech API (SpeechRecognition + SpeechSynthesis) for the phone-roleplay feature           |
-| **Server**  | Gunicorn (Django, port 8002), `next start` via systemd, Nginx reverse proxy with TLS                  |
-| **Static**  | WhiteNoise for Django static files; Next.js handles its own static assets                              |
-| **Deploy**  | **AWS EC2** (Amazon Linux, single instance, two systemd units: `debtclear` + `debtclear-frontend`)    |
+| **Frontend**| Server-rendered Django template (`templates/index.html`) — vanilla HTML + JS, **no build step or Node toolchain**. Tailwind via CDN, Chart.js 4 for charts, GSAP + ScrollTrigger + Lenis for motion |
+| **Server**  | Gunicorn (Django) behind Nginx, TLS via Let's Encrypt                                                  |
+| **Static**  | WhiteNoise for Django static files                                                                    |
+| **Deploy**  | **AWS EC2** (Amazon Linux, single instance, one systemd unit: `debtclear`)                            |
 
 ## Architecture
 
 ```
-                              ┌───────────────────────────────────────┐
-                              │         AWS EC2 (Amazon Linux)        │
-                              │  ┌────────────────────────────────┐   │
-   Browser  ───── HTTPS ─────►│  │   Nginx (reverse proxy + TLS)  │   │
-                              │  └────┬──────────────────┬────────┘   │
-                              │       │                  │            │
-                              │       │ /api/*           │ everything │
-                              │       ▼                  ▼ else        │
-                              │  ┌─────────────┐   ┌────────────────┐ │
-                              │  │ Django +    │   │ Next.js 14     │ │
-                              │  │ Gunicorn    │   │ (next start)   │ │
-                              │  │ :8002       │   │ :3005          │ │
-                              │  │ systemd     │   │ systemd        │ │
-                              │  └──────┬──────┘   └────────────────┘ │
-                              └─────────┼─────────────────────────────┘
-                                        │
-            ┌───────────────────────────┴───────────────────────────┐
-            │                  api/views.py (DRF)                   │
-            │   /api/analyze · /api/simulate · /api/negotiate ·     │
-            │   /api/roleplay · /api/letter · /api/chat · /api/health
-            └─┬───────┬───────────┬──────────┬─────────┬───────────┬┘
-              │       │           │          │         │           │
-              ▼       ▼           ▼          ▼         ▼           ▼
-       ┌───────────┐ ┌────────────┐ ┌───────────────┐ ┌───────────────────┐
-       │debt_engine│ │ai_advisor  │ │negotiation_   │ │   chat_engine     │
-       │ • month-  │ │• 3-para    │ │ engine        │ │• grounded Q&A     │
-       │   by-     │ │  analysis  │ │• leverage     │ │• full snapshot    │
-       │   month   │ │            │ │  0–100        │ │  in context        │
-       │   sim     │ │            │ │• settlement   │ │                    │
-       │ • Avalan- │ │            │ │  ranges       │ │                    │
-       │   che &   │ │            │ │• debt-type    │ ├───────────────────┤
-       │   Snow-   │ │            │ │  detection    │ │  letter_generator │
-       │   ball    │ │            │ └─────┬─────────┘ │• formal certified-│
-       │ • min-    │ │            │       │           │  mail letter      │
-       │   only    │ │            │       ▼           ├───────────────────┤
-       │   base-   │ │            │ ┌──────────────┐  │  roleplay_engine  │
-       │   line    │ │            │ │script_       │  │• turn-by-turn     │
-       │ • stress  │ │            │ │ generator    │  │  creditor agent   │
-       │   score   │ │            │ │• 7-section   │  │• status: active / │
-       │ • pure    │ │            │ │  phone script│  │  settled/declined │
-       │   Python  │ │            │ └──────────────┘  └───────────────────┘
-       └───────────┘ └─────┬──────┘
-                           │
-                           ▼
-                  ┌────────────────────────────────────────────────┐
-                  │              api/groq_pool.py                  │
-                  │  • Reads GROQ_API_KEYS (comma-separated)        │
-                  │  • Builds N Groq clients, max_retries=0, 20s tmo│
-                  │  • call_with_failover(fn) iterates until success│
-                  └─────────────────┬──────────────────────────────┘
-                                    │
+   Browser
+      │  HTTPS
+      ▼
+┌──────────────────────── AWS EC2 (Amazon Linux) ────────────────────────┐
+│                                                                         │
+│   Nginx (TLS, reverse proxy)  ──►  Django + Gunicorn (systemd: debtclear)
+│                                      • serves templates/index.html (UI) │
+│                                      • DRF JSON API under /api/          │
+│                                                                         │
+└────────────────────────────────────┬────────────────────────────────────┘
+                                      │
+                       ┌──────────────┴───────────────┐
+                       │       api/views.py (DRF)      │
+                       │  analyze · simulate ·         │
+                       │  negotiate · roleplay ·       │
+                       │  letter · chat · health       │
+                       └──────────────┬───────────────┘
+                                      │
+      ┌───────────┬──────────────────┼──────────────────┬─────────────┐
+      ▼           ▼                  ▼                  ▼             ▼
+ debt_engine  ai_advisor    negotiation_engine     chat_engine   letter_generator
+ • month-by-  • 3-para      • leverage 0–100        • grounded    • formal
+   month sim    analysis    • settlement ranges       Q&A           certified-mail
+ • Avalanche                • debt-type detection    • full          letter
+   & Snowball                • → script_generator      snapshot   roleplay_engine
+ • min-only                    (7-section script)      in context  • turn-by-turn
+   baseline                                                          creditor agent
+ • stress score
+ • pure Python
+                                      │
+                                      ▼
+                            api/groq_pool.py
+                 • reads GROQ_API_KEYS (comma-separated)
+                 • builds N Groq clients, max_retries=0, 20s timeout
+                 • call_with_failover(fn) iterates until success
+                                      │
                           fallback if all keys fail
-                                    ▼
-                  ┌────────────────────────────────────────────────┐
-                  │ Deterministic per-engine fallback (data-driven)│
-                  └────────────────────────────────────────────────┘
+                                      ▼
+            Deterministic per-engine fallback (data-driven)
 ```
 
 The simulation in `api/debt_engine.py` is **deterministic and pure-Python** — no hidden ML, no random sampling. Every dollar shown in the UI is traceable to that file. The LLM is given the math and writes the prose; it never invents the numbers.
@@ -145,11 +125,9 @@ The simulation in `api/debt_engine.py` is **deterministic and pure-Python** — 
 | `letter_generator`    | 1000         | 0.3           | Formal settlement letter body  |
 | `negotiation_engine`  | 60           | 0.2           | Settlement-range JSON          |
 
-Frontend routes are static: `/` (hero), `/how-it-works`, `/analyze` (debt form), `/results` (dashboard). Result data passes from `/analyze` to `/results` via `localStorage`.
+The frontend is a single server-rendered page (`templates/index.html`) served by Django at `/`. The debt form, results dashboard, and negotiate panels are all sections within that page, updated client-side from the JSON API — no separate frontend server or client-side routing.
 
 ## Local Setup
-
-### Backend
 
 ```bash
 # 1. Clone
@@ -164,17 +142,11 @@ pip install -r requirements.txt
 # 3. Configure environment
 cp .env.example .env             # then add GROQ_API_KEYS
 
-# 4. Run Django on port 8002 (the frontend expects this)
-python manage.py runserver 0.0.0.0:8002
+# 4. Run Django (serves both the UI and the API)
+python manage.py runserver       # → http://127.0.0.1:8000
 ```
 
-### Frontend
-
-```bash
-cd frontend
-npm install
-npm run dev                       # → http://localhost:3000
-```
+That's the whole app — there is no separate frontend to build or run. Open the printed URL and the UI is served directly by Django.
 
 If you don't add Groq credentials, the app still works — every engine falls back to a deterministic, data-driven response that uses the user's actual numbers. Add `GROQ_API_KEYS` (comma-separated for the multi-key pool) to switch on Llama 3.3.
 
@@ -194,13 +166,7 @@ GROQ_API_KEYS=gsk_key_one,gsk_key_two,gsk_key_three
 GROQ_MODEL=llama-3.3-70b-versatile
 ```
 
-Frontend (`frontend/.env.local`):
-
-```bash
-NEXT_PUBLIC_API_BASE=http://localhost:8002    # Django origin in dev
-```
-
-In production both env files are populated on the EC2 instance; the frontend points at the same origin (`/api/*` is reverse-proxied to Django by Nginx) so `NEXT_PUBLIC_API_BASE` can be left empty or omitted.
+The UI is served from the same Django origin as the API, so there is no separate frontend configuration to set.
 
 ## API
 
@@ -243,7 +209,7 @@ Full debt analysis with both strategies, stress score, and AI commentary.
 
 ### `POST /api/simulate/`
 
-Lightweight what-if endpoint — same simulation as `/api/analyze/` but skips the LLM call. Used by the in-app "what-if slider" to recompute payoff numbers as the user drags the extra-payment slider.
+Lightweight what-if endpoint — same simulation as `/api/analyze/` but skips the LLM call. Recomputes payoff numbers for a given extra-payment amount.
 
 ### `POST /api/negotiate/`
 
@@ -341,10 +307,9 @@ Returns `{"status": "ok"}` for uptime monitoring.
 
 The production stack runs on a single Amazon Linux EC2 instance:
 
-- **Django** on Gunicorn bound to `127.0.0.1:8002`, managed by systemd unit `debtclear`.
-- **Next.js** built with `npm run build` and served by `next start` on `127.0.0.1:3005`, managed by systemd unit `debtclear-frontend`.
-- **Nginx** in front, terminating TLS (Let's Encrypt) and reverse-proxying `/api/*` to Django (`:8002`) and everything else to Next.js (`:3005`).
-- **Static files** for Django collected with `python manage.py collectstatic` and served via WhiteNoise.
+- **Django** on Gunicorn (`core.wsgi`), managed by systemd unit `debtclear`. Django serves both the UI (`templates/index.html`) and the `/api/` endpoints.
+- **Nginx** in front, terminating TLS (Let's Encrypt) and reverse-proxying all traffic to Gunicorn.
+- **Static files** collected with `python manage.py collectstatic` and served via WhiteNoise.
 
 Deploy steps after a code change:
 
@@ -352,12 +317,9 @@ Deploy steps after a code change:
 ssh -i ~/debtclear-key.pem ec2-user@<host>
 cd ~/debtclear
 git pull
-# backend changed:
 source venv/bin/activate && pip install -r requirements.txt
+python manage.py collectstatic --noinput
 sudo systemctl restart debtclear
-# frontend changed:
-cd frontend && npm install && npm run build
-sudo systemctl restart debtclear-frontend
 ```
 
 ## What's Next
@@ -372,3 +334,5 @@ sudo systemctl restart debtclear-frontend
 ## License
 
 MIT — built by Aryan Gorde.
+</content>
+</invoke>
