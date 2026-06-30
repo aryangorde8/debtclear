@@ -311,16 +311,18 @@ The production stack runs on a single Amazon Linux EC2 instance:
 - **Nginx** in front, terminating TLS (Let's Encrypt) and reverse-proxying all traffic to Gunicorn.
 - **Static files** collected with `python manage.py collectstatic` and served via WhiteNoise.
 
-Deploy steps after a code change:
+### CI/CD — auto-deploy on push
 
-```bash
-ssh -i ~/debtclear-key.pem ec2-user@<host>
-cd ~/debtclear
-git pull
-source venv/bin/activate && pip install -r requirements.txt
-python manage.py collectstatic --noinput
-sudo systemctl restart debtclear
+Deploys are automated with GitHub Actions ([`.github/workflows/deploy.yml`](.github/workflows/deploy.yml)). Every push to `main`:
+
+1. **check** — runs `python manage.py check` + `collectstatic` so a broken build never ships.
+2. **deploy** — SSHes into the EC2 box, `git reset --hard origin/main`, then runs [`deploy/remote_deploy.sh`](deploy/remote_deploy.sh) (sync deps → collectstatic → check → `systemctl restart debtclear`).
+
 ```
+git push main ─▶ GitHub Actions ─▶ ssh ec2 ─▶ git reset --hard ─▶ pip install ─▶ collectstatic ─▶ restart gunicorn ─▶ live
+```
+
+One-time setup (deploy SSH key + the `EC2_HOST` / `EC2_USER` / `EC2_SSH_KEY` repo secrets) is in **[DEPLOY.md](DEPLOY.md)**. You can also trigger a deploy manually from the repo's **Actions** tab.
 
 ## What's Next
 

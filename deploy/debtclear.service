@@ -1,0 +1,27 @@
+# /etc/systemd/system/debtclear.service
+#
+# Reference systemd unit for the DebtClear Django app (Gunicorn).
+# Adjust User/Group and the two /home/ubuntu paths if your deploy user or
+# clone location differ (e.g. /home/ec2-user on Amazon Linux).
+#
+# Install:
+#   sudo cp deploy/debtclear.service /etc/systemd/system/debtclear.service
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now debtclear
+
+[Unit]
+Description=DebtClear (Django + Gunicorn)
+After=network.target
+
+[Service]
+User=ubuntu
+Group=www-data
+WorkingDirectory=/home/ubuntu/debtclear
+EnvironmentFile=/home/ubuntu/debtclear/.env
+ExecStart=/home/ubuntu/debtclear/venv/bin/gunicorn core.wsgi:application \
+          --bind 127.0.0.1:8002 --workers 2 --timeout 120
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
