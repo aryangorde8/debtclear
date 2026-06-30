@@ -21,6 +21,15 @@ else
   exit 1
 fi
 
+# 1b. Sync CI-managed secrets into .env (git-ignored, so this persists across deploys).
+#     GROQ_API_KEYS comes from the GitHub Actions secret of the same name.
+if [ -n "${GROQ_API_KEYS:-}" ]; then
+  touch .env
+  sed -i '/^#\? *GROQ_API_KEYS=/d' .env
+  printf 'GROQ_API_KEYS=%s\n' "$GROQ_API_KEYS" >> .env
+  echo "==> GROQ_API_KEYS synced into .env from CI secret"
+fi
+
 # 2. Sync dependencies (no-op when requirements are unchanged).
 python -m pip install --upgrade pip --quiet
 pip install -r requirements.txt --quiet

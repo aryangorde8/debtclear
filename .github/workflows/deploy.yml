@@ -46,6 +46,7 @@ jobs:
           EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}  # PRIVATE key for the deploy user
           SERVICE_NAME: ${{ secrets.SERVICE_NAME }}  # optional, default: debtclear
           APP_DIR: ${{ secrets.APP_DIR }}            # optional, default: /home/ubuntu/debtclear
+          GROQ_API_KEYS: ${{ secrets.GROQ_API_KEYS }}  # optional, enables live Llama 3.3 via Groq
         run: |
           set -euo pipefail
           APP_DIR="${APP_DIR:-/home/ubuntu/debtclear}"
@@ -61,4 +62,4 @@ jobs:
 
           echo "Deploying $GIT_URL to $EC2_USER@$EC2_HOST:$APP_DIR (service: $SERVICE)"
           ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes "$EC2_USER@$EC2_HOST" \
-            "set -e; cd '$APP_DIR'; git remote set-url origin '$GIT_URL'; git fetch --all --prune; git reset --hard origin/main; SERVICE='$SERVICE' bash deploy/remote_deploy.sh"
+            "set -e; cd '$APP_DIR'; git remote set-url origin '$GIT_URL'; git fetch --all --prune; git reset --hard origin/main; SERVICE='$SERVICE' GROQ_API_KEYS='$GROQ_API_KEYS' bash deploy/remote_deploy.sh"
