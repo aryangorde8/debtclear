@@ -50,12 +50,15 @@ jobs:
           set -euo pipefail
           APP_DIR="${APP_DIR:-/home/ubuntu/debtclear}"
           SERVICE="${SERVICE_NAME:-debtclear}"
+          # Canonical repo URL — keeps the server pinned to THIS repo even if its
+          # origin was left pointing somewhere else.
+          GIT_URL="${{ github.server_url }}/${{ github.repository }}.git"
 
           mkdir -p ~/.ssh && chmod 700 ~/.ssh
           printf '%s\n' "$EC2_SSH_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H "$EC2_HOST" >> ~/.ssh/known_hosts 2>/dev/null
 
-          echo "Deploying to $EC2_USER@$EC2_HOST:$APP_DIR (service: $SERVICE)"
+          echo "Deploying $GIT_URL to $EC2_USER@$EC2_HOST:$APP_DIR (service: $SERVICE)"
           ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes "$EC2_USER@$EC2_HOST" \
-            "set -e; cd '$APP_DIR'; git fetch --all --prune; git reset --hard origin/main; SERVICE='$SERVICE' bash deploy/remote_deploy.sh"
+            "set -e; cd '$APP_DIR'; git remote set-url origin '$GIT_URL'; git fetch --all --prune; git reset --hard origin/main; SERVICE='$SERVICE' bash deploy/remote_deploy.sh"
