@@ -28,7 +28,7 @@ DebtClear takes a user's debt portfolio (multiple debts with balance, APR, minim
 
 1. Simulates **Avalanche** (highest interest rate first), **Snowball** (lowest balance first), and a **minimum-only** baseline month-by-month with real interest compounding.
 2. Computes total interest paid, months to debt-free, and the exact dollar / time difference between the two active strategies vs. the do-nothing baseline.
-3. Calculates a **Financial Stress Score (0–100)** combining debt-to-income ratio, monthly-payment burden, and weighted average rate.
+3. Assigns a **Financial Stress Score (0–100)** — AI-assessed from debt-to-income ratio, payment burden, and weighted rate, with the deterministic formula as reference and fallback.
 4. Visualises the payoff trajectory, debt mix, milestone timeline, and "cost of waiting" with interactive **Chart.js** charts.
 5. Sends the math to **Llama 3.3 70B** (via Groq's low-latency inference API) for a 3-paragraph personalised analysis.
 6. Exposes a **Negotiate Mode** for every debt — leverage scoring, settlement ranges, and full phone scripts.
@@ -106,7 +106,7 @@ Every engine ships with a deterministic fallback so the app never produces an em
             Deterministic per-engine fallback (data-driven)
 ```
 
-The simulation in `api/debt_engine.py` is **deterministic and pure-Python** — no hidden ML, no random sampling. Every dollar shown in the UI is traceable to that file. The LLM is given the math and writes the prose; it never invents the numbers.
+The payoff **simulation** in `api/debt_engine.py` is **deterministic and pure-Python** — no ML, no random sampling — so every dollar in the charts and payoff timeline traces to that file. On top of the exact math, the LLM makes the **judgement calls** (financial stress score; and in Negotiate Mode the debt-type classification, leverage score, and hardship factors) and writes all the prose (analysis, chat, scripts, letters). Each judgement call falls back to a deterministic rule when Groq is unavailable, and the settlement **dollar figures** are always exact arithmetic — the LLM influences the percentages, never multiplies the numbers itself.
 
 ### Why Groq only?
 
@@ -118,12 +118,13 @@ The simulation in `api/debt_engine.py` is **deterministic and pure-Python** — 
 
 | Engine                | `max_tokens` | `temperature` | Purpose                       |
 |-----------------------|--------------|---------------|-------------------------------|
-| `ai_advisor`          | 800          | 0.4           | 3-paragraph plan analysis      |
-| `chat_engine`         | 300          | 0.5           | Short Q&A turns                |
-| `script_generator`    | 1500         | 0.3           | Full 7-section phone script    |
-| `roleplay_engine`     | 200          | 0.7           | Single creditor turn           |
-| `letter_generator`    | 1000         | 0.3           | Formal settlement letter body  |
-| `negotiation_engine`  | 60           | 0.2           | Settlement-range JSON          |
+| `ai_advisor` (analysis)     | 800  | 0.4 | 3-paragraph plan analysis                          |
+| `ai_advisor` (stress score) | 30   | 0.2 | Financial stress score 0–100 (JSON)                |
+| `chat_engine`               | 300  | 0.5 | Short Q&A turns                                    |
+| `script_generator`          | 1500 | 0.3 | Full 7-section phone script                        |
+| `roleplay_engine`           | 200  | 0.7 | Single creditor turn                               |
+| `letter_generator`          | 1000 | 0.3 | Formal settlement letter body                      |
+| `negotiation_engine`        | 250  | 0.3 | Debt type + leverage + hardship + settlement (JSON)|
 
 The frontend is a single server-rendered page (`templates/index.html`) served by Django at `/`. The debt form, results dashboard, and negotiate panels are all sections within that page, updated client-side from the JSON API — no separate frontend server or client-side routing.
 

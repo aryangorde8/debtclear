@@ -91,6 +91,13 @@ def analyze(request):
             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
 
+    # AI-assessed financial stress score (the deterministic formula in debt_engine is the
+    # reference + fallback). Only the /analyze flow uses AI here; /simulate stays
+    # deterministic so the what-if slider remains fast.
+    stress = ai_advisor.ai_stress_score(clean, results)
+    results["stress_score"] = stress["score"]
+    results["stress_source"] = stress["source"]
+
     advice = ai_advisor.generate_analysis(clean, results)
     results["ai_analysis"] = advice["text"]
     results["ai_source"] = advice["source"]

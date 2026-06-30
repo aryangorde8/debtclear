@@ -10,6 +10,7 @@ import hashlib
 import json
 import logging
 import os
+import re
 import time
 from typing import Any, Dict
 
@@ -247,3 +248,69 @@ def generate_analysis(debt_data: Dict[str, Any], results: Dict[str, Any]) -> Dic
 
     # 2. Deterministic fallback
     return {"text": _fallback_analysis(debt_data, results), "source": "fallback"}
+
+
+# ── AI financial stress score ─────────────────────────────────────────────────
+
+def _stress_prompt(debt_data: Dict[str, Any], results: Dict[str, Any], baseline: int) -> str:
+    debt_lines = "\n".join(
+        f"  - {d['name']}: balance ${d['balance']:,.2f}, rate {d['rate']}%, "
+        f"minimum ${d['min_payment']:,.2f}/mo"
+        for d in debt_data["debts"]
+    )
+    income = float(debt_data["monthly_income"] or 0)
+    total_debt = float(results.get("total_debt", 0) or 0)
+    total_min = sum(float(d["min_payment"]) for d in debt_data["debts"])
+    annual = income * 12
+    dti = (total_debt / annual * 100) if annual > 0 else 0
+    burden = (total_min / income * 100) if income > 0 else 0
+
+    return (
+        "You are a consumer-credit risk analyst. Rate this borrower's FINANCIAL STRESS on a "
+        "0-100 scale (0 = no stress, fully healthy; 100 = severe distress, near default).\n\n"
+        "Weigh: debt-to-annual-income ratio, the share of monthly income consumed by minimum "
+        "payments, the weighted average interest rate, and the number of concurrent debts.\n\n"
+        "BORROWER\n"
+        f"- Total debt: ${total_debt:,.2f}\n"
+        f"- Monthly income: ${income:,.2f} (annual ${annual:,.2f})\n"
+        f"- Debt-to-annual-income: {dti:.0f}%\n"
+        f"- Minimum payments: ${total_min:,.2f}/mo ({burden:.0f}% of income)\n"
+        f"- Weighted average APR: {results.get('weighted_avg_rate', 0)}%\n"
+        f"- Number of debts: {len(debt_data['debts'])}\n"
+        f"- Debts:\n{debt_lines}\n\n"
+        f"A standard rule-based model scored this {baseline}/100. Use it as a reference point, "
+        "but apply your own judgement and adjust up or down based on the specific risk profile.\n\n"
+        "Return ONLY valid JSON, no prose, no markdown:\n"
+        '{"stress_score": <integer 0-100>}'
+    )
+
+
+def ai_stress_score(debt_data: Dict[str, Any], results: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    AI-assessed financial stress score (0-100), with the deterministic formula as the
+    reference and fallback. Returns {"score": int, "source": "groq" | "fallback"}.
+    """
+    baseline = int(results.get("stress_score", 0) or 0)
+    prompt = _stress_prompt(debt_data, results, baseline)
+    model = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+
+    def _call_groq(client):
+        completion = client.chat.completions.create(
+            model=model,
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=30,
+            temperature=0.2,
+        )
+        return (completion.choices[0].message.content or "").strip()
+
+    raw = call_with_failover(_call_groq)
+    if raw:
+        try:
+            cleaned = re.sub(r"```[a-z]*", "", raw).strip().strip("`")
+            score = int(round(float(json.loads(cleaned)["stress_score"])))
+            if 0 <= score <= 100:
+                return {"score": score, "source": "groq"}
+        except Exception as exc:
+            logger.warning("Could not parse AI stress score '%s': %s", raw, exc)
+
+    return {"score": baseline, "source": "fallback"}
