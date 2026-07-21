@@ -620,17 +620,18 @@
 
     function makeStar(fromRight){
       const depth = Math.random();
+      const foreground = Math.random() < .24;
       const blue = Math.round(220 + Math.random() * 35);
       return {
         x: fromRight ? width + Math.random() * 80 : Math.random() * width,
         y: Math.random() * height,
-        radius: 0.28 + depth * depth * 1.15,
-        speed: 4 + depth * 17 + Math.random() * 5,
+        radius: foreground ? (.62 + depth * 1.35) : (.3 + depth * depth * .9),
+        speed: foreground ? (28 + depth * 38 + Math.random() * 14) : (7 + depth * 16 + Math.random() * 6),
         drift: (Math.random() - .5) * 1.4,
-        alpha: .16 + depth * .48,
+        alpha: foreground ? (.44 + depth * .36) : (.2 + depth * .4),
         phase: Math.random() * Math.PI * 2,
         twinkle: .001 + Math.random() * .002,
-        trail: Math.random() < .18 ? 10 + depth * 42 : 0,
+        trail: foreground ? (30 + depth * 82) : (Math.random() < .14 ? 10 + depth * 38 : 0),
         color: `186, ${blue}, 255`,
       };
     }
