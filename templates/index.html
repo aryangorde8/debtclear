@@ -618,12 +618,12 @@
 
     function mobile(){ return window.innerWidth < 768 || navigator.maxTouchPoints > 0; }
 
-    function makeStar(fromRight){
+    function makeStar(fromLeft){
       const depth = Math.random();
       const foreground = Math.random() < .24;
       const blue = Math.round(220 + Math.random() * 35);
       return {
-        x: fromRight ? width + Math.random() * 80 : Math.random() * width,
+        x: fromLeft ? -Math.random() * 80 : Math.random() * width,
         y: Math.random() * height,
         radius: foreground ? (.62 + depth * 1.35) : (.3 + depth * depth * .9),
         speed: foreground ? (28 + depth * 38 + Math.random() * 14) : (7 + depth * 16 + Math.random() * 6),
@@ -674,11 +674,11 @@
 
       if (star.trail) {
         const trail = star.trail * (.72 + (wobble + 1) * .14);
-        const tail = ctx.createLinearGradient(star.x + trail, y, star.x, y);
+        const tail = ctx.createLinearGradient(star.x - trail, y, star.x, y);
         tail.addColorStop(0, `rgba(${star.color}, 0)`);
         tail.addColorStop(1, `rgba(${star.color}, ${alpha * .62})`);
         ctx.beginPath();
-        ctx.moveTo(star.x + trail, y);
+        ctx.moveTo(star.x - trail, y);
         ctx.lineTo(star.x, y);
         ctx.strokeStyle = tail;
         ctx.lineWidth = Math.max(.34, star.radius * .7);
@@ -710,9 +710,9 @@
       const seconds = delta / 1000;
       stars.forEach(star => {
         if (seconds) {
-          star.x -= star.speed * seconds;
+          star.x += star.speed * seconds;
           star.y += star.drift * seconds;
-          if (star.x < -star.trail - 4 || star.y < -5 || star.y > height + 5) Object.assign(star, makeStar(true));
+          if (star.x > width + star.trail + 4 || star.y < -5 || star.y > height + 5) Object.assign(star, makeStar(true));
         }
         paintStar(star, time);
       });
