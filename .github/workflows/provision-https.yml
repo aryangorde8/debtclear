@@ -1,0 +1,72 @@
+name: Provision DebtClear HTTPS
+
+on:
+  workflow_dispatch:
+    inputs:
+      certbot_email:
+        description: Email address for Let's Encrypt expiry notices
+        required: true
+        default: aryangorde8@gmail.com
+
+permissions:
+  contents: read
+
+jobs:
+  provision:
+    name: Issue and install TLS certificate
+    runs-on: ubuntu-latest
+    env:
+      EC2_HOST: ${{ secrets.EC2_HOST }}
+      EC2_USER: ${{ secrets.EC2_USER }}
+      EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
+      CERTBOT_EMAIL: ${{ inputs.certbot_email }}
+      DOMAIN: debtclear.aryangorde.com
+    steps:
+      - name: Configure HTTPS on EC2
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "$EC2_SSH_KEY" > ~/.ssh/debtclear_https_key
+          chmod 600 ~/.ssh/debtclear_https_key
+          ssh-keyscan -H "$EC2_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+
+          ssh -i ~/.ssh/debtclear_https_key -o StrictHostKeyChecking=yes "$EC2_USER@$EC2_HOST" \
+            "bash -s -- '$CERTBOT_EMAIL' '$DOMAIN'" <<'REMOTE'
+          set -euo pipefail
+
+          CERTBOT_EMAIL="$1"
+          DOMAIN="$2"
+
+          if ! sudo -n true; then
+            echo "The EC2 deploy user needs passwordless sudo for Certbot and Nginx." >&2
+            exit 1
+          fi
+
+          if ! command -v certbot >/dev/null 2>&1; then
+            if command -v apt-get >/dev/null 2>&1; then
+              sudo apt-get update
+              sudo apt-get install -y certbot python3-certbot-nginx
+            elif command -v dnf >/dev/null 2>&1; then
+              sudo dnf install -y certbot python3-certbot-nginx
+            elif command -v yum >/dev/null 2>&1; then
+              sudo yum install -y certbot python3-certbot-nginx
+            else
+              echo "Could not find a supported package manager for Certbot." >&2
+              exit 1
+            fi
+          fi
+
+          sudo nginx -t
+          sudo certbot --nginx --non-interactive --agree-tos --email "$CERTBOT_EMAIL" --redirect -d "$DOMAIN"
+          sudo systemctl enable --now certbot.timer || true
+          sudo nginx -t
+          REMOTE
+
+      - name: Verify public HTTPS
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --show-error --silent --location --max-time 30 "https://${DOMAIN}/" --output /dev/null
