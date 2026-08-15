@@ -1,0 +1,101 @@
+name: Groq key health
+
+# Why this exists: when the Groq key expires, nothing breaks loudly. Every engine
+# falls back to a deterministic response (api/groq_pool.py -> call_with_failover
+# returns None), the site keeps serving 200s, and the degradation is invisible from
+# the outside. This probe asks production a real question once a day and fails the
+# run if the answer came from the fallback path instead of the model.
+#
+# A failed run emails the repo owner, which is the whole point — it is the only
+# thing that turns a silent key expiry into a notification.
+
+on:
+  schedule:
+    # 03:30 UTC daily (09:00 IST). Cron here is always UTC.
+    - cron: "30 3 * * *"
+  workflow_dispatch: {}
+
+# Scheduled runs never overlap with a manual spot-check.
+concurrency:
+  group: groq-health
+  cancel-in-progress: false
+
+jobs:
+  probe:
+    name: Probe the live advisor
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ask production a question and check which engine answered
+        env:
+          # Public site URL. Override with a repo variable if the host ever changes.
+          SITE_URL: ${{ vars.SITE_URL || 'https://debtclear.aryangorde.com' }}
+        run: |
+          set -euo pipefail
+
+          # A minimal but valid /api/chat/ payload — api/views.py::_validate_chat
+          # requires a dict snapshot and a non-empty question. The numbers are
+          # synthetic; we only care which engine produces the reply.
+          read -r -d '' PAYLOAD <<'JSON' || true
+          {
+            "question": "In one sentence, which debt should I pay first?",
+            "history": [],
+            "snapshot": {
+              "total_debt": 18400,
+              "monthly_income": 5200,
+              "extra_payment": 450,
+              "stress_score": 61,
+              "weighted_avg_rate": 17.4,
+              "recommended_strategy": "avalanche",
+              "avalanche": {"months": 34, "total_interest": 4120},
+              "snowball": {"months": 37, "total_interest": 4680},
+              "minimum_only": {"months": 118, "total_interest": 15230},
+              "debts": [
+                {"name": "Visa", "balance": 6200, "rate": 24.9, "min_payment": 155},
+                {"name": "Auto loan", "balance": 12200, "rate": 6.4, "min_payment": 310}
+              ]
+            }
+          }
+          JSON
+
+          echo "Probing $SITE_URL/api/chat/"
+          HTTP=$(curl -sS -o response.json -w '%{http_code}' \
+            --max-time 60 --retry 2 --retry-delay 5 \
+            -X POST "$SITE_URL/api/chat/" \
+            -H 'Content-Type: application/json' \
+            -d "$PAYLOAD")
+
+          echo "HTTP $HTTP"
+          echo "--- response ---"
+          cat response.json || true
+          echo
+          echo "----------------"
+
+          if [ "$HTTP" != "200" ]; then
+            echo "::error title=Advisor endpoint unreachable::$SITE_URL/api/chat/ returned HTTP $HTTP. This is a site/deploy problem, not necessarily the Groq key."
+            exit 1
+          fi
+
+          SOURCE=$(jq -r '.source // "missing"' response.json)
+          echo "source=$SOURCE"
+
+          case "$SOURCE" in
+            groq*)
+              echo "Groq is live (source=$SOURCE)."
+              echo "### Groq is live — \`source=$SOURCE\`" >> "$GITHUB_STEP_SUMMARY"
+              ;;
+            *)
+              echo "::error title=Groq unavailable::The advisor answered from '$SOURCE' instead of the model. The key is most likely expired, revoked, or rate-limited. The site is still up and its payoff math is still correct — only the AI-written guidance is degraded."
+              {
+                echo "### Groq unavailable — \`source=$SOURCE\`"
+                echo
+                echo "The site is up and the payoff calculations are unaffected, but every AI response is coming from the deterministic fallback."
+                echo
+                echo "To rotate the key:"
+                echo '```bash'
+                echo "gh secret set GROQ_API_KEYS --repo ${{ github.repository }}"
+                echo "gh workflow run deploy.yml --repo ${{ github.repository }}"
+                echo '```'
+              } >> "$GITHUB_STEP_SUMMARY"
+              exit 1
+              ;;
+          esac
