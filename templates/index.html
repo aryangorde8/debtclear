@@ -1620,14 +1620,22 @@
     try {
       const r = await api('/api/roleplay/', { debt:rp.debt, leverage:rp.leverage, history });
       let s = (r.status==='settled')?'settled':(r.status==='declined')?'declined':'active';
-      return { message:r.message, status:s, amount:r.settlement_amount };
+      // Only an explicit 'fallback' means Groq was unreachable — the opening line is
+      // 'scripted' by design and must not raise a warning.
+      return { message:r.message, status:s, amount:r.settlement_amount, degraded:r.source==='fallback' };
     } catch (err){ toast(err.message||'Connection lost','error'); return null; }
   }
 
-  function rpBubble(role, text){
+  function rpBubble(role, text, degraded){
     const convo = $('#rp-convo');
     const wrap = el('div', `flex ${role==='user'?'justify-end':'justify-start'}`);
-    wrap.innerHTML = `<div class="max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${role==='user'?'bg-blue-500/20 border border-blue-400/30 text-blue-50 rounded-br-sm':'bg-white/5 border border-white/10 text-zinc-100 rounded-bl-sm'}">${role==='creditor'?'<div class="text-[10px] uppercase tracking-wider text-zinc-500 mb-0.5">Sarah</div>':''}${esc(text)}</div>`;
+    const label = degraded
+      ? '<div class="text-[10px] uppercase tracking-wider text-amber-300 mb-0.5">⚠ Sarah · scripted reply, AI unavailable</div>'
+      : '<div class="text-[10px] uppercase tracking-wider text-zinc-500 mb-0.5">Sarah</div>';
+    const creditorBg = degraded
+      ? 'bg-amber-500/5 border border-amber-500/25 text-zinc-100 rounded-bl-sm'
+      : 'bg-white/5 border border-white/10 text-zinc-100 rounded-bl-sm';
+    wrap.innerHTML = `<div class="max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${role==='user'?'bg-blue-500/20 border border-blue-400/30 text-blue-50 rounded-br-sm':creditorBg}">${role==='creditor'?label:''}${esc(text)}</div>`;
     convo.appendChild(wrap); gsap.from(wrap,{opacity:0,y:8,duration:.3}); convo.scrollTop = convo.scrollHeight;
   }
   function rpTyping(on){
@@ -1647,7 +1655,7 @@
     rp.status='active'; rpRenderStatus();
     $('#rp-convo').innerHTML='';
     rp.history=[{role:'creditor',text:opener.message}];
-    rpBubble('creditor', opener.message); rpSpeak(opener.message);
+    rpBubble('creditor', opener.message, opener.degraded); rpSpeak(opener.message);
     rpControls();
   }
 
@@ -1659,7 +1667,7 @@
     rp.thinking=false; rpRenderActivity(); rpTyping(false);
     if (!reply || rp.cancelled) return;
     rp.history.push({role:'creditor',text:reply.message});
-    rpBubble('creditor', reply.message); rpSpeak(reply.message);
+    rpBubble('creditor', reply.message, reply.degraded); rpSpeak(reply.message);
     if (reply.status==='settled'){ rp.status='settled'; rp.settlement=reply.amount; rpRenderStatus(); toast(`Settled for ${fmtMoney(reply.amount||0)}!`,'success');
       const banner = el('div','bg-gradient-to-r from-emerald-500/15 to-blue-500/15 border border-emerald-400/30 rounded-xl p-4 mt-4');
       banner.innerHTML = `<div class="flex items-center gap-2 text-emerald-400 text-sm font-semibold mb-1">✓ Deal closed</div><div class="text-2xl font-bold text-white">${fmtMoney(reply.amount||0)}</div><div class="text-xs text-zinc-400 mt-1">You saved ${fmtMoney(rp.debt.balance-(reply.amount||0))} on a ${fmtMoney(rp.debt.balance)} balance</div>`;
