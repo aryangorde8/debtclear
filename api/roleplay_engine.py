@@ -111,27 +111,28 @@ def _fallback_response(history: List[Dict[str, str]], debt: Dict[str, Any], leve
     """Deterministic fallback if all AI providers fail."""
     target = float(debt["balance"]) * leverage["settlement_target"] / 100
     turns = len([m for m in history if m["role"] == "user"])
+    status, amount = "ongoing", None
 
     if turns == 0:
         msg = _opening_line(debt)
-        return {"message": msg, "status": "ongoing", "settlement_amount": None}
-    if turns == 1:
+    elif turns == 1:
         msg = (
             f"I see. Well, the balance on file is ${float(debt['balance']):,.2f} "
             f"and that's what's owed. What are you proposing today?"
         )
-        return {"message": msg, "status": "ongoing", "settlement_amount": None}
-    if turns == 2:
+    elif turns == 2:
         msg = (
             f"That's quite a bit lower than what we typically accept. The minimum "
             f"I could even take to my manager would be ${target:,.2f}. Can you do that?"
         )
-        return {"message": msg, "status": "ongoing", "settlement_amount": None}
-    msg = (
-        f"Alright. Let me speak with my manager — we can do ${target:,.2f} as a "
-        f"final settlement, paid within 14 days. Do we have a deal?"
-    )
-    return {"message": msg, "status": "settled", "settlement_amount": round(target, 2)}
+    else:
+        msg = (
+            f"Alright. Let me speak with my manager — we can do ${target:,.2f} as a "
+            f"final settlement, paid within 14 days. Do we have a deal?"
+        )
+        status, amount = "settled", round(target, 2)
+
+    return {"message": msg, "status": status, "settlement_amount": amount, "source": "fallback"}
 
 
 def generate_creditor_turn(
@@ -141,10 +142,19 @@ def generate_creditor_turn(
 ) -> Dict[str, Any]:
     """
     history: list of {role: 'user'|'creditor', text: str}, oldest first.
-    Returns: {message, status, settlement_amount}.
+    Returns: {message, status, settlement_amount, source}.
+
+    source is 'groq' when the model answered, 'fallback' when it was unreachable
+    and the caller is reading canned text, and 'scripted' for the opening line —
+    which never calls the model, so it says nothing about Groq's health.
     """
     if not history or all(m["role"] == "creditor" for m in history):
-        return {"message": _opening_line(debt), "status": "ongoing", "settlement_amount": None}
+        return {
+            "message": _opening_line(debt),
+            "status": "ongoing",
+            "settlement_amount": None,
+            "source": "scripted",
+        }
 
     system = _system_prompt(debt, leverage)
     messages = []
@@ -172,4 +182,4 @@ def generate_creditor_turn(
     if not clean:
         return _fallback_response(history, debt, leverage)
 
-    return {"message": clean, "status": status, "settlement_amount": amount}
+    return {"message": clean, "status": status, "settlement_amount": amount, "source": "groq"}

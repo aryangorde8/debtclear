@@ -21,14 +21,21 @@ else
   exit 1
 fi
 
-# 1b. Sync CI-managed secrets into .env (git-ignored, so this persists across deploys).
-#     GROQ_API_KEYS comes from the GitHub Actions secret of the same name.
-if [ -n "${GROQ_API_KEYS:-}" ]; then
+# 1b. Sync CI-managed config into .env (git-ignored, so this persists across deploys).
+#     GROQ_API_KEYS comes from the GitHub Actions secret of the same name;
+#     GROQ_MODEL from the repo variable. An unset value leaves .env untouched, so
+#     omitting GROQ_MODEL keeps whatever the server already has.
+sync_env() {
+  local key="$1" value="$2"
+  [ -n "$value" ] || return 0
   touch .env
-  sed -i '/^#\? *GROQ_API_KEYS=/d' .env
-  printf 'GROQ_API_KEYS=%s\n' "$GROQ_API_KEYS" >> .env
-  echo "==> GROQ_API_KEYS synced into .env from CI secret"
-fi
+  sed -i "/^#\? *${key}=/d" .env
+  printf '%s=%s\n' "$key" "$value" >> .env
+  echo "==> $key synced into .env from CI"
+}
+
+sync_env GROQ_API_KEYS "${GROQ_API_KEYS:-}"
+sync_env GROQ_MODEL "${GROQ_MODEL:-}"
 
 # 2. Sync dependencies (no-op when requirements are unchanged).
 python -m pip install --upgrade pip --quiet
