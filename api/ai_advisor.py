@@ -9,7 +9,6 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
-import os
 import re
 import time
 from typing import Any, Dict
@@ -45,7 +44,7 @@ def _set_cached(key: str, value):
 
 # ── Groq client pool (multi-key with failover) ───────────────────────────────
 
-from .groq_pool import call_with_failover
+from .groq_pool import call_with_failover, chat_model
 
 
 # ── Prompt ────────────────────────────────────────────────────────────────────
@@ -226,7 +225,7 @@ def generate_analysis(debt_data: Dict[str, Any], results: Dict[str, Any]) -> Dic
     prompt = _build_prompt(debt_data, results)
 
     # 1. Try Groq with key-pool failover
-    model = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+    model, extra = chat_model()
 
     def _call_groq(client):
         completion = client.chat.completions.create(
@@ -234,6 +233,7 @@ def generate_analysis(debt_data: Dict[str, Any], results: Dict[str, Any]) -> Dic
             messages=[{"role": "user", "content": prompt}],
             max_tokens=800,
             temperature=0.4,
+            **extra,
         )
         text = (completion.choices[0].message.content or "").strip()
         if not text:
@@ -292,14 +292,18 @@ def ai_stress_score(debt_data: Dict[str, Any], results: Dict[str, Any]) -> Dict[
     """
     baseline = int(results.get("stress_score", 0) or 0)
     prompt = _stress_prompt(debt_data, results, baseline)
-    model = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+    model, extra = chat_model()
 
     def _call_groq(client):
         completion = client.chat.completions.create(
             model=model,
             messages=[{"role": "user", "content": prompt}],
-            max_tokens=30,
+            # Reasoning models spend completion tokens before writing content;
+            # at 30 the whole budget went to reasoning and content came back
+            # empty. 150 leaves room (observed worst case: 140).
+            max_tokens=150,
             temperature=0.2,
+            **extra,
         )
         return (completion.choices[0].message.content or "").strip()
 

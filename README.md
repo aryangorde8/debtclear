@@ -55,7 +55,7 @@ Every engine ships with a deterministic fallback so the app never produces an em
 | Layer       | Choice                                                                                                |
 |-------------|-------------------------------------------------------------------------------------------------------|
 | **Backend** | Python 3.12, Django 5.0, Django REST Framework 3.15, django-cors-headers, python-dotenv               |
-| **AI**      | **Groq** — `llama-3.3-70b-versatile` (sole provider) with deterministic per-engine fallback           |
+| **AI**      | **Groq** — `openai/gpt-oss-120b` (sole provider) with deterministic per-engine fallback; override with `GROQ_MODEL` |
 | **AI infra**| Multi-key Groq client pool (`api/groq_pool.py`) with round-robin failover, 20s hard timeout, `max_retries=0` |
 | **Frontend**| Server-rendered Django template (`templates/index.html`) — vanilla HTML + JS, **no build step or Node toolchain**. Tailwind via CDN, Chart.js 4 for charts, GSAP + ScrollTrigger + Lenis for motion |
 | **Server**  | Gunicorn (Django) behind Nginx, TLS via Let's Encrypt                                                  |
@@ -161,10 +161,11 @@ DJANGO_SECRET_KEY=<generate-a-long-random-string>
 DJANGO_DEBUG=False
 DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1,debtclear.aryangorde.com
 
-# ── Groq (the only AI provider — Llama 3.3 70B Versatile) ────────────────────
+# ── Groq (the only AI provider) ──────────────────────────────────────────────
 # Comma-separated keys enable the multi-key failover pool. A single key works too.
 GROQ_API_KEYS=gsk_key_one,gsk_key_two,gsk_key_three
-GROQ_MODEL=llama-3.3-70b-versatile
+# Optional — omit to use the in-code default (api/groq_pool.py: DEFAULT_MODEL).
+GROQ_MODEL=openai/gpt-oss-120b
 ```
 
 The UI is served from the same Django origin as the API, so there is no separate frontend configuration to set.

@@ -10,7 +10,6 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
-import os
 import re
 import time
 from typing import Any, Dict, List, Tuple
@@ -57,7 +56,7 @@ SECTION_TITLES = {key: title for key, title in SECTION_ORDER}
 
 # ── Groq client pool ──────────────────────────────────────────────────────────
 
-from .groq_pool import call_with_failover
+from .groq_pool import call_with_failover, chat_model
 
 
 # ── Prompt & parsing ──────────────────────────────────────────────────────────
@@ -274,7 +273,7 @@ def generate_negotiation_script(
     prompt = _build_prompt(debt, leverage, financial_context)
 
     # 1. Try Groq with key-pool failover
-    model = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+    model, extra = chat_model()
 
     def _call_groq(client):
         completion = client.chat.completions.create(
@@ -282,6 +281,7 @@ def generate_negotiation_script(
             messages=[{"role": "user", "content": prompt}],
             max_tokens=1500,
             temperature=0.3,
+            **extra,
         )
         raw = (completion.choices[0].message.content or "").strip()
         parsed = _parse_sections(raw)
