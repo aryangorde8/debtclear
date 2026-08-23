@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import json
 import logging
-import os
 import re
 from typing import Any, Dict, List, Optional
 
@@ -99,7 +98,7 @@ def _compute_hardship_factors(
 
 # ── AI leverage assessment ────────────────────────────────────────────────────
 
-from .groq_pool import call_with_failover
+from .groq_pool import call_with_failover, chat_model
 
 
 def _ai_leverage_assessment(
@@ -154,7 +153,7 @@ def _ai_leverage_assessment(
         '"hardship_factors":["..."],"settlement":{"low":<int>,"target":<int>,"high":<int>}}'
     )
 
-    model = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+    model, extra = chat_model()
 
     def _call_groq(client):
         resp = client.chat.completions.create(
@@ -162,6 +161,7 @@ def _ai_leverage_assessment(
             messages=[{"role": "user", "content": prompt}],
             max_tokens=250,
             temperature=0.3,
+            **extra,
         )
         return (resp.choices[0].message.content or "").strip()
 

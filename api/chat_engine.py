@@ -8,10 +8,9 @@ user's actual numbers — not generic advice.
 from __future__ import annotations
 
 import logging
-import os
 from typing import Any, Dict, List
 
-from .groq_pool import call_with_failover
+from .groq_pool import call_with_failover, chat_model
 
 logger = logging.getLogger(__name__)
 
@@ -84,7 +83,7 @@ def answer_question(snapshot: Dict[str, Any], history: List[Dict[str, str]], que
     messages.append({"role": "user", "content": question})
 
     # 1. Groq with failover
-    model = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+    model, extra = chat_model()
 
     def _call_groq(client):
         completion = client.chat.completions.create(
@@ -92,6 +91,7 @@ def answer_question(snapshot: Dict[str, Any], history: List[Dict[str, str]], que
             messages=[{"role": "system", "content": system}, *messages],
             max_tokens=300,
             temperature=0.5,
+            **extra,
         )
         text = (completion.choices[0].message.content or "").strip()
         if not text:

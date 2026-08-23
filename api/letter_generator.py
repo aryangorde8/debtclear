@@ -7,11 +7,10 @@ when the phone negotiation stalls. AI-generated with deterministic fallback.
 from __future__ import annotations
 
 import logging
-import os
 from datetime import datetime
 from typing import Any, Dict
 
-from .groq_pool import call_with_failover
+from .groq_pool import call_with_failover, chat_model
 
 logger = logging.getLogger(__name__)
 
@@ -122,7 +121,7 @@ def generate_settlement_letter(
     """Returns {body, source} where source is 'groq' or 'fallback'."""
     prompt = _build_prompt(debt, leverage, financial_context)
 
-    model = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+    model, extra = chat_model()
 
     def _call_groq(client):
         resp = client.chat.completions.create(
@@ -130,6 +129,7 @@ def generate_settlement_letter(
             messages=[{"role": "user", "content": prompt}],
             max_tokens=1000,
             temperature=0.3,
+            **extra,
         )
         text = (resp.choices[0].message.content or "").strip()
         if len(text) < 200:
