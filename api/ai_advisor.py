@@ -1,7 +1,7 @@
 """
 AI financial-advice integration.
 
-Priority: Groq (Llama 3.3 70B Versatile, multi-key pool) → deterministic fallback.
+Priority: Amazon Bedrock (Nova Pro via Converse) → deterministic fallback.
 The fallback is always responsive so the demo never breaks.
 """
 from __future__ import annotations
@@ -42,9 +42,9 @@ def _set_cached(key: str, value):
     _CACHE[key] = (value, time.time())
 
 
-# ── Groq client pool (multi-key with failover) ───────────────────────────────
+# ── Bedrock client ───────────────────────────────────────────────────────────
 
-from .groq_pool import call_with_failover, chat_model
+from .bedrock_client import converse
 
 
 # ── Prompt ────────────────────────────────────────────────────────────────────
@@ -216,7 +216,7 @@ def _fallback_analysis(debt_data: Dict[str, Any], results: Dict[str, Any]) -> st
 # ── Public API ────────────────────────────────────────────────────────────────
 
 def generate_analysis(debt_data: Dict[str, Any], results: Dict[str, Any]) -> Dict[str, Any]:
-    """Returns {text, source} where source is 'groq', 'fallback', or *_cached."""
+    """Returns {text, source} where source is 'bedrock', 'fallback', or *_cached."""
     key = _cache_key(debt_data, results)
     cached = _get_cached(key)
     if cached:
@@ -224,25 +224,15 @@ def generate_analysis(debt_data: Dict[str, Any], results: Dict[str, Any]) -> Dic
 
     prompt = _build_prompt(debt_data, results)
 
-    # 1. Try Groq with key-pool failover
-    model, extra = chat_model()
-
-    def _call_groq(client):
-        completion = client.chat.completions.create(
-            model=model,
-            messages=[{"role": "user", "content": prompt}],
-            max_tokens=800,
-            temperature=0.4,
-            **extra,
-        )
-        text = (completion.choices[0].message.content or "").strip()
-        if not text:
-            raise ValueError("Empty completion")
-        return text
-
-    text = call_with_failover(_call_groq)
+    # 1. Bedrock
+    text = converse(
+        system=None,
+        messages=[{"role": "user", "content": prompt}],
+        max_tokens=800,
+        temperature=0.4,
+    )
     if text:
-        result = {"text": text, "source": "groq"}
+        result = {"text": text, "source": "bedrock"}
         _set_cached(key, result)
         return result
 
@@ -288,32 +278,22 @@ def _stress_prompt(debt_data: Dict[str, Any], results: Dict[str, Any], baseline:
 def ai_stress_score(debt_data: Dict[str, Any], results: Dict[str, Any]) -> Dict[str, Any]:
     """
     AI-assessed financial stress score (0-100), with the deterministic formula as the
-    reference and fallback. Returns {"score": int, "source": "groq" | "fallback"}.
+    reference and fallback. Returns {"score": int, "source": "bedrock" | "fallback"}.
     """
     baseline = int(results.get("stress_score", 0) or 0)
     prompt = _stress_prompt(debt_data, results, baseline)
-    model, extra = chat_model()
-
-    def _call_groq(client):
-        completion = client.chat.completions.create(
-            model=model,
-            messages=[{"role": "user", "content": prompt}],
-            # Reasoning models spend completion tokens before writing content;
-            # at 30 the whole budget went to reasoning and content came back
-            # empty. 150 leaves room (observed worst case: 140).
-            max_tokens=150,
-            temperature=0.2,
-            **extra,
-        )
-        return (completion.choices[0].message.content or "").strip()
-
-    raw = call_with_failover(_call_groq)
+    raw = converse(
+        system=None,
+        messages=[{"role": "user", "content": prompt}],
+        max_tokens=150,
+        temperature=0.2,
+    )
     if raw:
         try:
             cleaned = re.sub(r"```[a-z]*", "", raw).strip().strip("`")
             score = int(round(float(json.loads(cleaned)["stress_score"])))
             if 0 <= score <= 100:
-                return {"score": score, "source": "groq"}
+                return {"score": score, "source": "bedrock"}
         except Exception as exc:
             logger.warning("Could not parse AI stress score '%s': %s", raw, exc)
 

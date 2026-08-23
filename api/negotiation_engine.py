@@ -98,7 +98,7 @@ def _compute_hardship_factors(
 
 # ── AI leverage assessment ────────────────────────────────────────────────────
 
-from .groq_pool import call_with_failover, chat_model
+from .bedrock_client import converse
 
 
 def _ai_leverage_assessment(
@@ -111,7 +111,7 @@ def _ai_leverage_assessment(
 ) -> Optional[Dict[str, Any]]:
     """
     One AI call that judges debt type, leverage score, hardship factors and the settlement
-    range together. Returns the parsed JSON dict, or None when Groq is unavailable or the
+    range together. Returns the parsed JSON dict, or None when Bedrock is unavailable or the
     output can't be parsed (callers then fall back to the deterministic values).
     """
     balance = float(debt["balance"])
@@ -153,19 +153,12 @@ def _ai_leverage_assessment(
         '"hardship_factors":["..."],"settlement":{"low":<int>,"target":<int>,"high":<int>}}'
     )
 
-    model, extra = chat_model()
-
-    def _call_groq(client):
-        resp = client.chat.completions.create(
-            model=model,
-            messages=[{"role": "user", "content": prompt}],
-            max_tokens=250,
-            temperature=0.3,
-            **extra,
-        )
-        return (resp.choices[0].message.content or "").strip()
-
-    raw = call_with_failover(_call_groq)
+    raw = converse(
+        system=None,
+        messages=[{"role": "user", "content": prompt}],
+        max_tokens=250,
+        temperature=0.3,
+    )
     if not raw:
         return None
 
@@ -210,7 +203,7 @@ def analyze_debt_leverage(
     debt_count: int = 1,
 ) -> Dict[str, Any]:
     # Deterministic baselines — handed to the AI as a reference and used as the fallback if
-    # Groq is unavailable or returns junk. The settlement *dollars* (computed later in
+    # Bedrock is unavailable or returns junk. The settlement *dollars* (computed later in
     # calculate_settlement_savings) always stay exact arithmetic.
     det_type = detect_debt_type(debt.get("name", ""))
     det_leverage = _heuristic_leverage_score(det_type, financial_context, debt_count)
@@ -226,7 +219,7 @@ def analyze_debt_leverage(
         debt, det_type, det_leverage, det_hardship, financial_context, debt_count
     )
     if ai:
-        source = "groq"
+        source = "bedrock"
 
         # debt type (must be one we recognise)
         t = str(ai.get("debt_type", "")).strip()

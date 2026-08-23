@@ -123,7 +123,7 @@ sudo apt update && sudo apt install -y python3-venv nginx git
 sudo adduser --disabled-password --gecos "" ubuntu   # if needed
 git clone https://github.com/aryangorde8/debtclear.git ~/debtclear
 cd ~/debtclear && python3 -m venv venv && source venv/bin/activate && pip install -r requirements.txt
-cp .env.example .env && nano .env          # set DJANGO_SECRET_KEY, GROQ_API_KEYS, DJANGO_ALLOWED_HOSTS
+cp .env.example .env && nano .env          # set DJANGO_SECRET_KEY, AWS_BEARER_TOKEN_BEDROCK, DJANGO_ALLOWED_HOSTS
 python manage.py collectstatic --noinput
 sudo cp deploy/debtclear.service /etc/systemd/system/ && sudo systemctl enable --now debtclear
 sudo cp deploy/nginx.conf /etc/nginx/sites-available/debtclear
@@ -137,6 +137,13 @@ Then do steps 2–5 above.
 
 ## Notes
 
-- **Set `GROQ_API_KEYS` in the server's `.env`** or the AI advisor stays in deterministic offline-fallback mode.
+- **Set `AWS_BEARER_TOKEN_BEDROCK` in the server's `.env`** (or give the instance an IAM role with
+  `bedrock:InvokeModel`) or every AI surface stays in deterministic offline-fallback mode.
+- **Leave `BEDROCK_MODEL` unset** unless deliberately overriding. A value in `.env` beats
+  `api/bedrock_client.py:DEFAULT_MODEL`, and a stale pin silently survives the deploy meant to replace it —
+  which is exactly how a decommissioned model kept serving fallbacks for six days. To override, set the
+  `BEDROCK_MODEL` **repo variable**; `deploy/remote_deploy.sh` syncs it on every deploy.
+- **Nova Pro is not available In-Region from `eu-north-1`.** The default is the EU geo inference profile
+  `eu.amazon.nova-pro-v1:0`; the bare `amazon.nova-pro-v1:0` fails there with `ValidationException`.
 - The app has **no database** (`DATABASES = {}`), so there are no migrations to run.
 - `git reset --hard origin/main` makes the server match the pushed commit exactly — local edits on the box are discarded by design. Make changes via git, not on the server.

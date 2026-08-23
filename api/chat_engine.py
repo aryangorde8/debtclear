@@ -10,7 +10,7 @@ from __future__ import annotations
 import logging
 from typing import Any, Dict, List
 
-from .groq_pool import call_with_failover, chat_model
+from .bedrock_client import converse
 
 logger = logging.getLogger(__name__)
 
@@ -82,25 +82,10 @@ def answer_question(snapshot: Dict[str, Any], history: List[Dict[str, str]], que
     messages = [{"role": m["role"], "content": m["content"]} for m in trimmed if m.get("content")]
     messages.append({"role": "user", "content": question})
 
-    # 1. Groq with failover
-    model, extra = chat_model()
-
-    def _call_groq(client):
-        completion = client.chat.completions.create(
-            model=model,
-            messages=[{"role": "system", "content": system}, *messages],
-            max_tokens=300,
-            temperature=0.5,
-            **extra,
-        )
-        text = (completion.choices[0].message.content or "").strip()
-        if not text:
-            raise ValueError("Empty completion")
-        return text
-
-    text = call_with_failover(_call_groq)
+    # 1. Bedrock
+    text = converse(system=system, messages=messages, max_tokens=300, temperature=0.5)
     if text:
-        return {"text": text, "source": "groq"}
+        return {"text": text, "source": "bedrock"}
 
     # 2. Deterministic fallback
     return {"text": _fallback_reply(question, snapshot), "source": "fallback"}
