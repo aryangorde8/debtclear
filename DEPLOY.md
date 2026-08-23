@@ -138,5 +138,8 @@ Then do steps 2–5 above.
 ## Notes
 
 - **Set `GROQ_API_KEYS` in the server's `.env`** or the AI advisor stays in deterministic offline-fallback mode.
+- **Leave `GROQ_MODEL` unset in the server's `.env`** unless you mean to override the model. A value there wins over
+  `api/groq_pool.py:DEFAULT_MODEL`, so a stale pin silently survives the deploy that was supposed to replace it. To
+  override, set the `GROQ_MODEL` **repo variable** — `deploy/remote_deploy.sh` syncs it in on every deploy.
 - The app has **no database** (`DATABASES = {}`), so there are no migrations to run.
 - `git reset --hard origin/main` makes the server match the pushed commit exactly — local edits on the box are discarded by design. Make changes via git, not on the server.
