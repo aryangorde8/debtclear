@@ -12,7 +12,7 @@ import logging
 import re
 from typing import Any, Dict, List
 
-from .groq_pool import call_with_failover, chat_model
+from .bedrock_client import converse
 
 logger = logging.getLogger(__name__)
 
@@ -151,9 +151,10 @@ def generate_creditor_turn(
     history: list of {role: 'user'|'creditor', text: str}, oldest first.
     Returns: {message, status, settlement_amount, source}.
 
-    source is 'groq' when the model answered, 'fallback' when it was unreachable
-    and the caller is reading canned text, and 'scripted' for the opening line —
-    which never calls the model, so it says nothing about Groq's health.
+    source is 'bedrock' when the model answered, 'fallback' when it was
+    unreachable and the caller is reading canned text, and 'scripted' for the
+    opening line — which never calls the model, so it says nothing about
+    Bedrock's health.
     """
     if not history or all(m["role"] == "creditor" for m in history):
         return {
@@ -169,19 +170,7 @@ def generate_creditor_turn(
         role = "user" if m["role"] == "user" else "assistant"
         messages.append({"role": role, "content": m["text"]})
 
-    model, extra = chat_model()
-
-    def _call_groq(client):
-        resp = client.chat.completions.create(
-            model=model,
-            messages=[{"role": "system", "content": system}, *messages],
-            max_tokens=200,
-            temperature=0.7,
-            **extra,
-        )
-        return (resp.choices[0].message.content or "").strip()
-
-    raw = call_with_failover(_call_groq)
+    raw = converse(system=system, messages=messages, max_tokens=200, temperature=0.7)
 
     if not raw:
         return _fallback_response(history, debt, leverage)
@@ -190,4 +179,4 @@ def generate_creditor_turn(
     if not clean:
         return _fallback_response(history, debt, leverage)
 
-    return {"message": clean, "status": status, "settlement_amount": amount, "source": "groq"}
+    return {"message": clean, "status": status, "settlement_amount": amount, "source": "bedrock"}

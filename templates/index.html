@@ -598,11 +598,13 @@
     if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
     return data;
   }
-  // Engines tag every response with source: 'groq' | 'fallback' (+ '_cached').
+  // Engines tag every response with source: 'bedrock' | 'fallback' (+ '_cached'),
+  // plus 'scripted' for the roleplay opener. Test for the degraded value rather
+  // than the provider name — this broke once when the provider changed.
   // Anything that isn't Groq means the model was unreachable and the user is
   // reading a deterministic estimate — say so instead of hiding it.
-  const isFallback = (src) => !(src && String(src).startsWith('groq'));
-  const aiSourceLabel = (src) => isFallback(src) ? 'Offline estimate (Groq unavailable)' : 'Llama 3.3 70B · Groq';
+  const isFallback = (src) => !src || String(src).startsWith('fallback');
+  const aiSourceLabel = (src) => isFallback(src) ? 'Offline estimate (AI unavailable)' : 'Amazon Nova Pro · Bedrock';
 
   // ============================================================
   //  Animated starfield — a slow, layered drift that stays visible behind

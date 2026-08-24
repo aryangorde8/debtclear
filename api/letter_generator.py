@@ -10,7 +10,7 @@ import logging
 from datetime import datetime
 from typing import Any, Dict
 
-from .groq_pool import call_with_failover, chat_model
+from .bedrock_client import converse
 
 logger = logging.getLogger(__name__)
 
@@ -118,26 +118,17 @@ def generate_settlement_letter(
     leverage: Dict[str, Any],
     financial_context: Dict[str, Any],
 ) -> Dict[str, Any]:
-    """Returns {body, source} where source is 'groq' or 'fallback'."""
+    """Returns {body, source} where source is 'bedrock' or 'fallback'."""
     prompt = _build_prompt(debt, leverage, financial_context)
 
-    model, extra = chat_model()
-
-    def _call_groq(client):
-        resp = client.chat.completions.create(
-            model=model,
-            messages=[{"role": "user", "content": prompt}],
-            max_tokens=1000,
-            temperature=0.3,
-            **extra,
-        )
-        text = (resp.choices[0].message.content or "").strip()
-        if len(text) < 200:
-            raise ValueError("Letter too short")
-        return text
-
-    raw = call_with_failover(_call_groq)
-    if raw:
-        return {"body": raw, "source": "groq"}
+    raw = converse(
+        system=None,
+        messages=[{"role": "user", "content": prompt}],
+        max_tokens=1000,
+        temperature=0.3,
+    )
+    # A letter this short is a truncated or refused generation, not a real one.
+    if raw and len(raw) >= 200:
+        return {"body": raw, "source": "bedrock"}
 
     return {"body": _fallback_letter(debt, leverage, financial_context), "source": "fallback"}

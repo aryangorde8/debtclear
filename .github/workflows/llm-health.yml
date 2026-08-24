@@ -1,13 +1,18 @@
-name: Groq key health
+name: AI provider health
 
-# Why this exists: when the Groq key expires, nothing breaks loudly. Every engine
-# falls back to a deterministic response (api/groq_pool.py -> call_with_failover
-# returns None), the site keeps serving 200s, and the degradation is invisible from
-# the outside. This probe asks production a real question once a day and fails the
-# run if the answer came from the fallback path instead of the model.
+# Why this exists: when the AI provider stops answering, nothing breaks loudly.
+# Every engine falls back to a deterministic response (api/bedrock_client.py ->
+# converse returns None), the site keeps serving 200s, and the degradation is
+# invisible from the outside. This probe asks production a real question once a
+# day and fails the run if the answer came from the fallback path.
 #
 # A failed run emails the repo owner, which is the whole point — it is the only
-# thing that turns a silent key expiry into a notification.
+# thing that turns a silent outage into a notification. It has already caught a
+# revoked key AND a model that was decommissioned out from under us.
+#
+# The check below tests for the DEGRADED value, not the provider name. The old
+# version matched on 'groq*' and would have gone red on every healthy call the
+# moment the provider changed.
 
 on:
   schedule:
@@ -17,7 +22,7 @@ on:
 
 # Scheduled runs never overlap with a manual spot-check.
 concurrency:
-  group: groq-health
+  group: llm-health
   cancel-in-progress: false
 
 jobs:
@@ -71,7 +76,7 @@ jobs:
           echo "----------------"
 
           if [ "$HTTP" != "200" ]; then
-            echo "::error title=Advisor endpoint unreachable::$SITE_URL/api/chat/ returned HTTP $HTTP. This is a site/deploy problem, not necessarily the Groq key."
+            echo "::error title=Advisor endpoint unreachable::$SITE_URL/api/chat/ returned HTTP $HTTP. This is a site/deploy problem, not necessarily the AI provider."
             exit 1
           fi
 
@@ -79,23 +84,29 @@ jobs:
           echo "source=$SOURCE"
 
           case "$SOURCE" in
-            groq*)
-              echo "Groq is live (source=$SOURCE)."
-              echo "### Groq is live — \`source=$SOURCE\`" >> "$GITHUB_STEP_SUMMARY"
-              ;;
-            *)
-              echo "::error title=Groq unavailable::The advisor answered from '$SOURCE' instead of the model. The key is most likely expired, revoked, or rate-limited. The site is still up and its payoff math is still correct — only the AI-written guidance is degraded."
+            fallback*|missing|"")
+              echo "::error title=AI provider unavailable::The advisor answered from '$SOURCE' instead of the model. The site is still up and its payoff math is still correct — only the AI-written guidance is degraded."
               {
-                echo "### Groq unavailable — \`source=$SOURCE\`"
+                echo "### AI provider unavailable — \`source=$SOURCE\`"
                 echo
                 echo "The site is up and the payoff calculations are unaffected, but every AI response is coming from the deterministic fallback."
                 echo
+                echo "Likely causes, in the order they have actually bitten us:"
+                echo "1. The model was decommissioned or is not offered in \`BEDROCK_REGION\` — check the deploy log and \`api/bedrock_client.py:DEFAULT_MODEL\`."
+                echo "2. A stale \`BEDROCK_MODEL\` pin in the server's .env is overriding the code default."
+                echo "3. The Bedrock API key was revoked, or the IAM identity lost \`bedrock:InvokeModel\`."
+                echo "4. Throttling — check the Bedrock service quotas for the model."
+                echo
                 echo "To rotate the key:"
                 echo '```bash'
-                echo "gh secret set GROQ_API_KEYS --repo ${{ github.repository }}"
+                echo "gh secret set AWS_BEARER_TOKEN_BEDROCK --repo ${{ github.repository }}"
                 echo "gh workflow run deploy.yml --repo ${{ github.repository }}"
                 echo '```'
               } >> "$GITHUB_STEP_SUMMARY"
               exit 1
+              ;;
+            *)
+              echo "AI provider is live (source=$SOURCE)."
+              echo "### AI provider is live — \`source=$SOURCE\`" >> "$GITHUB_STEP_SUMMARY"
               ;;
           esac

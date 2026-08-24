@@ -1,7 +1,7 @@
 """
 Negotiation script generation.
 
-Priority: Groq (Llama 3.3 70B Versatile, multi-key pool) → deterministic fallback.
+Priority: Amazon Bedrock (Nova Pro via Converse) → deterministic fallback.
 All expected sections are always returned — missing ones from the LLM are
 filled deterministically so the UI never renders an empty card.
 """
@@ -54,9 +54,9 @@ SECTION_ORDER: List[Tuple[str, str]] = [
 SECTION_TITLES = {key: title for key, title in SECTION_ORDER}
 
 
-# ── Groq client pool ──────────────────────────────────────────────────────────
+# ── Bedrock client ────────────────────────────────────────────────────────────
 
-from .groq_pool import call_with_failover, chat_model
+from .bedrock_client import converse
 
 
 # ── Prompt & parsing ──────────────────────────────────────────────────────────
@@ -263,7 +263,7 @@ def generate_negotiation_script(
     leverage: Dict[str, Any],
     financial_context: Dict[str, Any],
 ) -> Dict[str, Any]:
-    """Returns {sections, source, raw} where source is 'groq' or 'fallback'."""
+    """Returns {sections, source, raw} where source is 'bedrock' or 'fallback'."""
     key = _cache_key(debt, financial_context)
     cached = _get_cached(key)
     if cached:
@@ -272,29 +272,18 @@ def generate_negotiation_script(
     fallback = _fallback_sections(debt, leverage, financial_context)
     prompt = _build_prompt(debt, leverage, financial_context)
 
-    # 1. Try Groq with key-pool failover
-    model, extra = chat_model()
-
-    def _call_groq(client):
-        completion = client.chat.completions.create(
-            model=model,
-            messages=[{"role": "user", "content": prompt}],
-            max_tokens=1500,
-            temperature=0.3,
-            **extra,
-        )
-        raw = (completion.choices[0].message.content or "").strip()
-        parsed = _parse_sections(raw)
-        if not parsed:
-            raise ValueError("Could not parse script sections")
-        return raw, parsed
-
-    groq_result = call_with_failover(_call_groq)
-    if groq_result:
-        raw, parsed = groq_result
+    # 1. Bedrock
+    raw = converse(
+        system=None,
+        messages=[{"role": "user", "content": prompt}],
+        max_tokens=1500,
+        temperature=0.3,
+    )
+    parsed = _parse_sections(raw) if raw else None
+    if parsed:
         result = {
             "sections": _normalise_sections(parsed, fallback),
-            "source": "groq",
+            "source": "bedrock",
             "raw": raw,
         }
         _set_cached(key, result)

@@ -22,9 +22,10 @@ else
 fi
 
 # 1b. Sync CI-managed config into .env (git-ignored, so this persists across deploys).
-#     GROQ_API_KEYS comes from the GitHub Actions secret of the same name;
-#     GROQ_MODEL from the repo variable. An unset value leaves .env untouched, so
-#     omitting GROQ_MODEL keeps whatever the server already has.
+#     AWS_BEARER_TOKEN_BEDROCK comes from the GitHub Actions secret of the same
+#     name; BEDROCK_REGION and BEDROCK_MODEL from repo variables. An unset value
+#     leaves .env untouched, so a stale pin there survives — which is why
+#     BEDROCK_MODEL should normally be left unset and owned by the code.
 sync_env() {
   local key="$1" value="$2"
   [ -n "$value" ] || return 0
@@ -34,8 +35,13 @@ sync_env() {
   echo "==> $key synced into .env from CI"
 }
 
-sync_env GROQ_API_KEYS "${GROQ_API_KEYS:-}"
-sync_env GROQ_MODEL "${GROQ_MODEL:-}"
+sync_env AWS_BEARER_TOKEN_BEDROCK "${AWS_BEARER_TOKEN_BEDROCK:-}"
+sync_env BEDROCK_REGION "${BEDROCK_REGION:-}"
+sync_env BEDROCK_MODEL "${BEDROCK_MODEL:-}"
+
+# Groq is gone. Strip its keys so a stale value can't linger in .env and so an
+# old key stops sitting on disk after the provider switch.
+sed -i '/^#\? *GROQ_API_KEYS=/d;/^#\? *GROQ_MODEL=/d' .env 2>/dev/null || true
 
 # 2. Sync dependencies (no-op when requirements are unchanged).
 python -m pip install --upgrade pip --quiet
